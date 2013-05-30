@@ -1,0 +1,109 @@
+#!/bin/bash
+
+###============================================================================
+###
+###         FILE:  test
+###
+###        USAGE:  test
+###
+###  DESCRIPTION:  Test various features of shellmenu for debugging
+###
+###      OPTIONS:  --help, --verbose, --quiet
+### REQUIREMENTS:  ui-functions, shellmenu.conf
+###         BUGS:  ---
+###        NOTES:  ---
+###       AUTHOR:  Michael A. Taylor (mataylortech@gmail.com)
+###      COMPANY:  ---
+###      VERSION:  Beta
+###      CREATED:  04/03/2013
+###     REVISION:  04/03/2013
+###============================================================================
+
+# Source
+. ./ui-functions
+. ./shellmenu.conf
+
+scriptname=$(basename $0)
+TMP=`mktemp /tmp/${scriptname}.XXXXXX`
+
+# Set a trap to remove the temp file when the program exits.
+trap cleanup HUP QUIT TERM EXIT
+trap interrupt INT
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# FUNCTIONS
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+interrupt() {
+  ## Trap Cntrl-C, set INT to 1
+  INT=1
+} # End of interrupt
+
+cleanup() {
+  ## Remove temp file if it exists.
+  [ -f "$TMP" ] && rm -f $TMP
+} # End of cleanup
+
+usage_help() {
+  ## Display title header to standard output
+  cat "$0" | egrep '^###'
+  return 0
+} # End of Usage
+
+#------------------------------------------------------------------------------
+# PRE-PROCESSING
+#------------------------------------------------------------------------------
+
+# Initialize variables and arrays
+INT=0
+
+# Parse command-line parameters
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage_help
+      exit 0
+      ;; 
+    -v|--verbose)
+      verbose=0
+      shift
+      ;;
+    -q|--quiet)
+      verbose=1
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+
+#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# MAIN
+#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+  menu_list=(\
+  "one|alskdjlakjdf"
+  "two|alskdjflaksjfal"
+  "three|asldkfjalksdjalkfj"
+  "four|aslkdjfalksdjalkfj"
+  "five|alskdjfalksdjla"
+  "six|alskdjfalksjdfl;akjsdl;akfj"
+  "seven|alskdjfalksdjflaksjdflajsdlkasjdf"
+  "eight|alskdjfalksdfjlaksjal;ksfjlaksjf;laksdjf;laksjf;lakj"
+  "nine|alsdkjnmwnalwke lkwen lwkenr lwkenl;kwne r;weln"
+  "ten|alksdjflkaj l;kej l;kawej lfkv alklknl;4r jalkjzl;xckj"
+  "eleven|alksdfj lkej;lkwejr lkwejr lkj welkrj lwekjr wel;k "
+  "tweleve|alsdkfj lkj l;kwja l;kasjd fl;kaj elkja "
+  "thirteen|laskdflakj lwekjr lwekj l;skjflakj lk jl; j"
+  "fourteen|laksd jf"
+  "fifteen|alskd alskj lakj lakf lka l lkjaslkflkasjdfl; ak alskd jf"
+  "sixteen|oweirlkasnmf oaijer klfm4i tlkmoiet ;oiwej"
+  "seventeen|sad lkj 4weiroquweir ql;kmwer q4 lkjoijwe r"
+  "eighteen|asldkj o4iwer qoaj32o;ijl;34j oialwkejoij4o3 ij"
+  "nineteen|23o9i4 l2k3joi23ij oi2j"
+  "twenty|aslkdj lw4je rli2j lkjw eoi2lkj roisl;scvos9iuoiejr l")
+  
+  Dlg CHECKLIST "This is a test"

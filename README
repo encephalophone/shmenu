@@ -1,0 +1,20 @@
+shellmenu 0.10 notes
+
+Author:  Michael A. Taylor <encephalophone@gmail.com>
+
+A work-in-progress.  The purpose of this project is to provide a simplified tool for quickly creating and maintaining menu-driven shell scripts, while addressing some problems with whiptail and zenity.  It is essentially a wrapper for whiptail and zenity with the ability to also create menus in a terminal where neither are available.
+
+Pre-requisites:
+
+  bash
+  a terminal emulator
+  tput
+  grep, egrep
+  awk
+  sed
+  bc
+
+
+One of the following is recommended.
+  whiptail
+  zenity

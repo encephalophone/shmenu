@@ -1,0 +1,251 @@
+  =============================================================================
+  
+           FILE:  ui-functions
+  
+          USAGE:  source ui-functions
+  
+    DESCRIPTION:  Common functions for shellmenu system user interface elements.
+  
+        OPTIONS:  ---
+   REQUIREMENTS:  shellmenu.conf
+           BUGS:  ---
+          NOTES:  ---
+         AUTHOR:  Michael A. Taylor (mataylortech@gmail.com)
+        COMPANY:  ---
+        VERSION:  Beta
+        CREATED:  Summer 2008
+       REVISION:  
+  =============================================================================
+  
+setcolor()
+   Easily set text color for color terminal output.  Supports only one arg.
+   Usage:
+   setcolor [red|blue|yellow|green|bold|normal]
+   echo "Some text..."
+   setcolor normal
+
+drawline()
+   Draw a line of characters across a color terminal.  Color is optional.
+   Usage:
+   drawline {string to repeat} {red|green|blue|yellow|purple|bold}
+
+MSG()
+   Display Message to stdout and log
+
+vMSG()
+   Only send output on to MSG function if global var "verbose" = 0 (true)
+
+DebugMsg()
+   For displaying debugging messages to stderr
+   Usage:
+     #DebugMsg "Some text"
+
+LogMsg()
+   Write message to program log if global var "LOGERRORS" = "yes"
+   Usage:
+   LogMsg "Some text"
+
+ErrorMsg()
+   Print error message to stderr for color terminal, write to log if needed
+   Usage:
+   ErrorMsg "Some text..." {name of calling script or function}
+
+WarningMsg()
+   Print warning message to stderr for color terminal
+   Usage:
+   WarningMsg "Some text..." {name of calling script or function}
+
+Dlg()
+   Common helper for both GUI (zenity) or TUI (dialog/whiptail) dialog boxes
+   and menus.
+  
+   Usage:
+     Dlg {options} function {"titlebar(menus only)"} "text" "default text"
+  
+   Options:
+     --show-keys|-s                     Show key field also (radiolist or
+                                        checklist only)
+     --pre-select|--1                   Pre-select items in a checklist
+     --extra-option|-e "--option"       ??? Not implemented yet
+  
+   Functions:
+     MENU                               Show a list of menu items
+     RADIOLIST                          Show a radiolist-type menu
+     CHECKLIST                          Show a checklist-type menu
+     ENTRY                              Get user input
+     PASSWORDBOX                        Get user input, hide typed characters
+     INFO                               Show a dialog with a message
+     ERROR                              Display an error dialog
+     WARNING                            Display a warning dialog
+     QUESTION                           Show an OK/Cancel dialog
+     TEXT                               Display contents of a file
+  
+   Notes:
+   * "Default text" arg only works with ENTRY function.
+   * For TEXT functiton, replaced "text" with filename.
+   * Titlebar used with menus and text boxes, but not with dialogs which have 
+     default titles.
+   * MENUS: global array "menu_list[ ]" must already by populated according
+     to the following "|" separated format:
+  
+                  key items...
+                  --- ------------------------
+    menu_list[0]: one|apples|bananas|coconuts...
+    menu_list[1]: two|pineapples|strawberries|star fruits...
+    etc...
+
+   Provides a simplified method for using different types of dialog boxes
+   with zenity, a set of GUI widgets.  This function is normally called by 
+   the function Dlg().
+
+tDlg()
+   Provides a simplified method for using different types of dialog boxes
+   in a terminal window.  Works with "dialog" or "whiptail", and  
+   is usually called by the function Dlg().
+   Usage:
+   tDlg $1            $2          $3                   $4
+        [msgbox]      ["title"]   ["text"]             [ignored]
+        [yesno]       ["title"]   ["text"]             [ignored]
+        [inputbox]    ["title"]   ["instruction text"] ["default text"]
+        [passwordbox] ["title"]   ["instruction text"] [ignored]
+        [textbox]     ["title"]   [/path/to/filename ] [ignored]
+
+tCenter_text()
+   Center text for TUI dialogs
+   Usage:
+     tCenter_text [width] ["some text"]
+   
+
+tMenu()
+   Generate a TUI menu.  Populates var 'choice' and array 'choice_list[]' (for
+   use in checklists).  Called by 'Dlg [MENU]' when GUI=0.
+   Usage:
+   tMenu {options} function "titlebar text" {"instruction text"}
+
+gMenu()
+   Display menus using Zenity.
+
+cliMenu()
+   Command-line menu tool.  Usually called by Dlg().  Returns key value
+   from $menu_list[ ], or an array of values in $choice_list[ ].
+   Usage:
+   cliMenu [options] "function" "title" "text"
+  
+   Options:
+     --show-keys=[yes|no(default)]
+
+cliDlg()
+   Command-line only dialog functions
+
+tPrompt()
+   Prompt user for input.  For terminal only.  Populates global
+   variable '$answer'.  Will also echo choice to stdout, unless --quiet
+   option is used.  Returns exit codes 1 if user enters "exit", or 255
+   if user presses enter to accept the default.
+   Usage:
+   tPrompt [OPTIONS] "Some text" {default}
+            -b|--bold-prompt     Use bold text for prompt
+            -n|--no-exit-msg     Do not show 'exit' message
+            -q|--quiet           Do not echo answer
+
+pause()
+   Wait for user to press ENTER key or Click 'OK'.
+
+tPause()
+   Wait for user to press ENTER key.  Terminal only.
+
+get_width()
+   Print the maxium width of a line or a list to stdout.
+
+get_key_list()
+   Print all keys (first fields of '|' separated list) to stdout.
+
+get_item_list()
+   Omit keys from '|' separated list in file $1, print the rest to stdout.
+ 
+
+tablify()
+   Arrange "|"-separated fields in file $1 into a table.
+   
+     
+ 
+   
+
+
+quotify()
+   Add double-quotes to each line in file $1, print to stdout
+       
+         
+
+insertify()
+   Insert an UN-quoted string into a quoted list after first quoted item
+   example:
+   "one" INSERTED TEXT "two" "three"...
+
+count_fields()
+   Count the max number of "|"-seperated fields in a file.
+   
+
+normalize_list()
+   If a list has only one field, copy the first field to the second, 
+   separated by '|', unless $1=yes.  Also, equalize the number of fields in 
+   all lines of file $2.
+   
+     
+       
+         
+
+pad_text()
+   Add spaces to the end of a line of text up to a specified column width, 
+   write to stdout.
+   Usage:
+   pad_text "Some text..." [minium width]
+
+center_text()
+   Center text in the terminal
+   
+
+format_instruction_text_for_dialog()
+   Output formatted text to stdout
+   $1: text to be formatted
+   $2: maximum width in pixels (including edges of window)
+
+task_exec()
+   Execute a sequence of interactive commands or functions.  Used to make
+   menus go forward, backward, or stay in place depending on the exit code
+   of the command or function being executed.  An exit code of 1 goes back
+   one level, and an exit code of 0 goes forward.  222 means "stay in place",
+   and any other number means "go back x places in the list".  Currently,
+   this function cannot accept arguments for the individual commands.
+   Usage:
+   task_exec [task1] [task2] [task3]...
+     
+   NOTE: Typical usage:
+   
+   task_list=(\
+   name_of_function_1 \
+   name_of_function_2 \
+   name of function_3...)
+  
+   task_exec "${task_list[@]}"
+   status="$?"; [ ! "$status" = "0" ] && return $status
+
+progress_meter()
+   TODO Make this an awk script instead!
+   A simple progress bar for the terminal.
+   Usage:
+   progress_meter [n] {red|green|blue|yellow}
+   ** 'n' is a number
+
+pre_selection()
+   Generate a menu asking whether all folders should be pre-selected, or none.
+   This is needed because zenity has no pre-selection option.
+   Echo choice to stdout
+
+clean_output()
+   Remove residual ansi color codes using sed
+
+choose_folders()
+   Display a list of folders for user to select from in a checklist menu,
+   or select all folders in image root; echo to stdout
+

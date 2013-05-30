@@ -1,0 +1,1625 @@
+#!/bin/bash
+
+##=============================================================================
+##
+##         FILE:  ui-functions
+##
+##        USAGE:  source ui-functions
+##
+##  DESCRIPTION:  Common functions for shellmenu system user interface elements.
+##
+##      OPTIONS:  ---
+## REQUIREMENTS:  shellmenu.conf
+##         BUGS:  ---
+##        NOTES:  ---
+##       AUTHOR:  Michael A. Taylor (mataylortech@gmail.com)
+##      COMPANY:  ---
+##      VERSION:  Beta
+##      CREATED:  Summer 2008
+##     REVISION:  4/17/2013
+##=============================================================================
+##
+
+# Note: If invoked from the command line, print a list of functions and their 
+# descriptions to standard output.
+
+if [[ $(basename $0 ) == 'ui-functions' ]]; then
+  egrep -e "() {$" -e "^}" -e "^ *##.*" $0 | \
+    sed -e 's/ [{]$//g' -e "s/^[}].*//" -e 's/^ *##/  /g'
+  exit 0
+fi
+
+setcolor() {
+  ## Easily set text color for color terminal output.  Supports only one arg.
+  ## Usage:
+  ## setcolor [red|blue|yellow|green|bold|normal]
+  ## echo "Some text..."
+  ## setcolor normal
+
+  case $1 in
+    red) textcolor="\033[1;31m"
+    ;;
+    blue) textcolor="\033[1;34m"
+    ;;
+    yellow) textcolor="\033[1;33m"
+    ;;
+    green) textcolor="\033[1;32m"
+    ;;
+    purple) textcolor="\033[1;35m"
+    ;;
+    bold) textcolor="\033[1m"
+    ;;
+    *) textcolor="\033[0m"
+    ;;
+  esac
+
+  echo -e "$textcolor\c"
+
+  return 0
+} # End of setcolor
+
+drawline() {
+  ## Draw a line of characters across a color terminal.  Color is optional.
+  ## Usage:
+  ## drawline {string to repeat} {red|green|blue|yellow|purple|bold}
+
+  local str=$1
+  local color=$2
+  local i=
+  [ -z "$str" ] || [ "$str" = "" ] && str="-"
+  local width=$(tput cols)
+  local length=${#str}
+  [ ! -z "$color" ] && setcolor $color >&2
+  for (( i=1 ; i < $width/$length; i++)); do
+    echo -en "$str\c" >&2
+  done
+  [ ! -z "$color" ] && setcolor normal >&2
+  echo -en "\n" >&2
+} # end of drawline
+
+MSG() {
+  ## Display Message to stdout and log
+  # Parse command-line parameters
+  [ "$quiet" = "0" ] && LogMsg "$@" && return 0
+  local set_bold="no"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -b|--bold)
+        set_bold="yes"
+        shift
+        ;;
+      *)
+        break
+    esac
+  done
+
+    if [ "$set_bold" = "yes" ]; then
+      setcolor bold && echo "$@" && setcolor normal
+    else
+      echo "$@"
+      LogMsg "$@"
+    fi
+
+  return 0
+} # End MSG
+
+vMSG() {
+  ## Only send output on to MSG function if global var "verbose" = 0 (true)
+  local option=
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -b|--bold)
+        option="--bold"
+        shift
+        ;;
+      *)
+        break
+    esac
+  done
+  [ "$verbose" = "0" ] && MSG $option "$@"
+  return $?
+} # End of vMSG
+
+DebugMsg() {
+  ## For displaying debugging messages to stderr
+  ## Usage:
+  ##   #DebugMsg "Some text"
+  [ ! "$SHOW_DEBUG_MESSAGES" = "yes" ] && return 0
+  local msg_text="$@"
+  if [ ! -z "$1" ]; then
+    setcolor purple >&2
+    echo -e " # $msg_text" >&2
+    setcolor normal >&2
+    return 0
+  else
+    setcolor red >&2
+    echo -e " # [ ? ]" >&2
+    setcolor normal >&2
+    return 1
+  fi
+} # End of #DebugMsg
+
+LogMsg() {
+  ## Write message to program log if global var "LOGERRORS" = "yes"
+  ## Usage:
+  ## LogMsg "Some text"
+  [ -z "$1" ] && return 1
+  [ ! "$LOGERRORS" = "yes" ] && return 1
+  echo "$(date +%D\ %R) $*" >>$SMLOGFILE
+  return 0
+} # End of LogMsg
+
+ErrorMsg() {
+  ## Print error message to stderr for color terminal, write to log if needed
+  ## Usage:
+  ## ErrorMsg "Some text..." {name of calling script or function}
+  local culprit
+  local msg_text
+  [ ! -z "$2" ] && culprit=": $2"
+  msg_text="ERROR${culprit}: $1"
+  setcolor red
+  echo "$msg_text" >&2
+  setcolor normal
+  [ "$LOGERRORS" = "yes" ] && LogMsg "$msg_text"
+  return 0
+} # End of ErrorMsg
+
+WarningMsg() {
+  ## Print warning message to stderr for color terminal
+  ## Usage:
+  ## WarningMsg "Some text..." {name of calling script or function}
+  local culprit
+  [ ! -z "$2" ] && culprit=": $2"
+  local msg_text="WARNING${culprit}: $1"
+  setcolor yellow
+  echo "$msg_text" >&2
+  setcolor normal
+  [ "$LOGERRORS" = "yes" ] && LogMsg "$msg_text"
+  return 0
+} # End of WarningMsg
+
+Dlg() {
+  ## Common helper for both GUI (zenity) or TUI (dialog/whiptail) dialog boxes
+  ## and menus.
+  ##
+  ## Usage:
+  ##   Dlg {options} function {"titlebar(menus only)"} "text" "default text"
+  ##
+  ## Options:
+  ##   --show-keys|-s                     Show key field also (radiolist or
+  ##                                      checklist only)
+  ##   --pre-select|--1                   Pre-select items in a checklist
+  ##   --extra-option|-e "--option"       ??? Not implemented yet
+  ##
+  ## Functions:
+  ##   MENU                               Show a list of menu items
+  ##   RADIOLIST                          Show a radiolist-type menu
+  ##   CHECKLIST                          Show a checklist-type menu
+  ##   ENTRY                              Get user input
+  ##   PASSWORDBOX                        Get user input, hide typed characters
+  ##   INFO                               Show a dialog with a message
+  ##   ERROR                              Display an error dialog
+  ##   WARNING                            Display a warning dialog
+  ##   QUESTION                           Show an OK/Cancel dialog
+  ##   TEXT                               Display contents of a file
+  ##
+  ## Notes:
+  ## * "Default text" arg only works with ENTRY function.
+  ## * For TEXT functiton, replaced "text" with filename.
+  ## * Titlebar used with menus and text boxes, but not with dialogs which have 
+  ##   default titles.
+  ## * MENUS: global array "menu_list[ ]" must already by populated according
+  ##   to the following "|" separated format:
+  ##
+  ##                key items...
+  ##                --- ------------------------
+  ##  menu_list[0]: one|apples|bananas|coconuts...
+  ##  menu_list[1]: two|pineapples|strawberries|star fruits...
+  ##  etc...
+
+  # The following must remain null until set:
+  pre_selection_status=
+  dlg_extra_opt=
+  show_keys=
+  local options=
+
+  # Parse options
+  if [ "${1:0:1}" = "-" ]; then
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --pre-select|--1)
+          options="$options --1"
+          shift
+          ;;
+        --show-keys|--showkeys|-s)
+          options="$options --show-keys"
+          shift
+          ;;
+        --extra-option|-e)
+          shift
+          options="$options --$1"
+          shift
+          ;;
+        *)
+          break
+          ;;
+        esac
+    done
+  fi
+
+  local calling_script=$(echo "$0" | awk -F/ '{ printf $NF }')
+  local dlg_function=$(echo $1 | tr '[:upper:]' '[:lower:]')
+  local dlg_function_all_caps=$(echo $1 | tr '[:lower:]' '[:upper:]')
+  local dlg_text=
+  local dlg_prompt=
+  local dlg_default=
+  local filename=$(echo $3 | sed 's/^[[:space:]]*//')
+  local titlebar=
+
+  # Global Variables
+  answer=
+
+  case $dlg_function in
+    warning|error|info)
+      shift
+      dlg_text="$@"
+      case "$GUI" in
+        0)
+          tDlg msgbox "$dlg_function_all_caps" "$dlg_text"
+          return 0
+          ;;
+        1)
+          gDlg "$dlg_function" "$calling_script: $dlg_functions_all_caps" "$dlg_text"
+          return 0
+          ;;
+        *)
+          cliDlg $dlg_function "$dlg_text"
+          return 0
+          ;;
+      esac
+      ;;
+    text)
+      case "$GUI" in
+        0)
+          tDlg textbox "$2" "$filename"
+          return $?
+          ;;
+        1)
+          gDlg text "$2" "$filename"
+          ;;
+        *)
+          [ -z "$3" ] && filename=$(echo $2 | sed 's/^[[:space:]]*//')
+          cliDlg text "$filename"
+          return 0
+          ;;
+      esac
+      ;;
+
+    question)
+      dlg_text="$2"
+      case "$GUI" in
+        0)
+          tDlg yesno "$dlg_function_all_caps" "$dlg_text"
+          return $?
+          ;;
+        1)
+          gDlg question "$dlg_function_all_caps" "$dlg_text"
+          return $?
+          ;;
+        *)
+          cliDlg question "$dlg_text"
+          return $?
+          ;;
+      esac
+      ;;
+    entry)
+      dlg_prompt="$2"
+      dlg_default="$3"
+      case "$GUI" in
+        0)
+          tDlg inputbox "$dlg_function_all_caps" "$dlg_prompt" "$dlg_default"
+          return $?
+          ;;
+        1)
+          gDlg entry "$dlg_function_all_caps" "$dlg_prompt" "$dlg_default"
+          return $?
+          ;;
+        *)
+          cliDlg entry "$dlg_prompt" "$dlg_default"
+          return $?
+          ;;
+      esac
+      ;;
+    passwordbox|password)
+      dlg_prompt="$2"
+      case "$GUI" in
+        0)
+          tDlg passwordbox "$dlg_function_all_caps" "$dlg_prompt"
+          return $?
+          ;;
+        1)
+          gDlg passwordbox "PASSWORD REQUIRED" "$dlg_prompt"
+          return $?          
+          ;;
+        *)
+          cliDlg passwordbox "$dlg_prompt"
+          return $?
+          ;;
+      esac
+      ;;
+    menu|checklist|radiolist)
+      shift
+      # local variables
+      titlebar="$1"
+      shift
+      dlg_text="$@"
+
+      case "$GUI" in
+        0)
+          DebugMsg "$@"
+          DebugMsg "tMenu $pre_selection_status $dlg_function $titlebar $dlg_text"
+          tMenu $options "$dlg_function" "$titlebar" "$dlg_text"
+          return $?
+          ;;
+        1)
+          DebugMsg "$@"
+          DebugMsg "gMenu $pre_selection_status $dlg_function $titlebar $dlg_text"
+          gMenu $options "$dlg_function" "$titlebar" "$dlg_text"
+          return $?
+          ;;
+        *)
+          DebugMsg "Defaulting to cliMenu"
+          cliMenu $options "$dlg_function" "$titlebar" "$dlg_text"
+          return $?
+          ;;
+      esac
+      ;;
+   *)
+    ErrorMsg "Unknown function ($dlg_function)" "Dlg"
+    return 1
+    ;;
+  esac
+  unset menu_list
+  return 0
+} # End of Dlg
+
+gDlg(){
+  ## Provides a simplified method for using different types of dialog boxes
+  ## with zenity, a set of GUI widgets.  This function is normally called by 
+  ## the function Dlg().
+
+  # Gloval Var
+  answer=
+
+  # Local Var
+  local dlg_function="$1"
+  local dlg_function_all_caps=$(echo $1 | tr '[:lower:]' '[:upper:]')  
+  local title="$2"
+  local dlg_text="$3"
+  local default_text="$4"
+  local dlg_prompt="$dlg_text"
+  local filename=$3
+  local x=
+  local max_entry_text_len=
+
+  DebugMsg "function = $dlg_function"
+  DebugMsg "title = $title"
+  DebugMsg "dlg_text:\n$dlg_text"
+  DebugMsg "default_text = $default_text"
+
+  # Default height, width is 0, or "auto"
+  local dlg_width=0
+  local dlg_height=0
+
+  # Entry boxes cannot handle more than one line.  This is a zenity issue.
+  # To work around, we need to truncate the prompt text to the maximum width.
+  x=$(echo "scale=2; $gMAX_DIALOG_WIDTH / $FONT_WIDTH" | bc)
+  max_entry_text_len=$(printf "%.0f" $x)
+  DebugMsg "max_entry_text_len = $max_entry_text_len"
+  if [ ${#dlg_text} -gt $max_entry_text_len ]; then
+    dlg_prompt="${dlg_text:0:$max_entry_text_len}"
+  fi
+
+  # Set min text width
+  x=$(echo "scale=2; $gMIN_DIALOG_WIDTH / $FONT_WIDTH" | bc)
+  local min_text_width=$(printf "%.0f" $x)
+  DebugMsg "min_text_width = $min_text_width"
+
+  # Calculate width of dialog
+  x=$(echo "scale=2; ${#dlg_text} * $FONT_WIDTH + 50" | bc)
+  dlg_width=$(printf "%.0f" $x)
+  
+  # Limit the width of the dialog
+  [ $dlg_width -gt $gMAX_DIALOG_WIDTH ] && dlg_width=$gMAX_DIALOG_WIDTH
+  
+  # Limit the height of the dialog -- not currently used.
+  #[ $dlg_height -gt $gMAX_DIALOG_HEIGHT ] && dlg_height=$gMAX_DIALOG_HEIGHT
+
+  # If length of msg text <= minimum text width, center it and pad with spaces
+  [ ${#dlg_text} -le $min_text_width ] && dlg_width=$gMIN_DIALOG_WIDTH
+
+  # Calculate height
+  # THERE IS A BUG IN ZENITY OR ITS DEPENDENCIES THAT MAKES A DIALOG BOX PROPORTIONALLY TALL AS IT GETS WIDER.  ONLY A FEW LINES OF TEXT ARE NEEDED TO MAKE THE WINDOW TALLER THAN THE SCREEN.  DO NOT EXPECT THIS TO GET BETTER SOON.
+  
+  DebugMsg "dlg_width = $dlg_width"
+  DebugMsg "dlg_height = $dlg_height"
+
+  case $dlg_function in
+    warning|info|error)
+      # pad text so that dialog box doesn't look stupid
+      dlg_text=$(pad_text "$dlg_text" $gMIN_DIALOG_TEXT_WIDTH )
+      zenity --$dlg_function --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text"  --width="$dlg_width"  --height="$dlg_height"
+      return 0
+      ;;
+    text)
+      [ ! -f "$filename" ] && ErrorMsg "Filename required for text box." $FUNCNAME && return 1
+      zenity --text-info --title="$title" --filename="$filename" --width=$gMAX_DIALOG_WIDTH --height=$gMAX_DIALOG_HEIGHT
+      return 0
+      ;;
+    question)
+      zenity --question --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text" --width="$dlg_width" --height="$dlg_height"
+      return $?
+      ;;
+    entry)
+      zenity --entry --title="$calling_script: $dlg_function_all_caps" --text="$dlg_prompt" --entry-text="$dlg_default" --width=$dlg_width --height=$dlg_height
+      status="$?"
+      return $status
+      ;;
+    passwordbox)
+      zenity --entry --title="$calling_script: $title" --text="$dlg_prompt" --entry-text="$dlg_default" --width="$dlg_width" --height="$dlg_height" --hide-text
+      status="$?"
+      return $status
+      ;;
+    *)
+      ErrorMsg "Unknown function '$dlg_function'" "$FUNCNAME"
+      return 1
+      ;;
+  esac
+return 0
+} # End of gDlg  
+
+tDlg() {
+  ## Provides a simplified method for using different types of dialog boxes
+  ## in a terminal window.  Works with "dialog" or "whiptail", and  
+  ## is usually called by the function Dlg().
+  ## Usage:
+  ## tDlg $1            $2          $3                   $4
+  ##      [msgbox]      ["title"]   ["text"]             [ignored]
+  ##      [yesno]       ["title"]   ["text"]             [ignored]
+  ##      [inputbox]    ["title"]   ["instruction text"] ["default text"]
+  ##      [passwordbox] ["title"]   ["instruction text"] [ignored]
+  ##      [textbox]     ["title"]   [/path/to/filename ] [ignored]
+
+  # Global Var
+  answer=
+
+  # Local Var
+  local dlg_function="$1"  
+  local title="$2"
+  local msg_text="$3"
+  local default_text="$4"
+  local backtitle="$DEFAULT_BACKTITLE"
+  local filename="$3"
+
+  # Default height, width is 0, or "auto"
+  local dlg_width=0
+  local dlg_height=0
+
+  # Set limits on text width, taking into account the dialog box itself
+  local min_text_width=$(( tMIN_DIALOG_WIDTH - 6 ))
+  local max_text_width=$(( tMAX_DIALOG_WIDTH - 6 ))
+
+  # If length of msg text < minimum text width, center it and pad with spaces
+  if [ ${#msg_text} -lt $min_text_width ]; then
+    msg_text=$(tCenter_text $min_text_width $msg_text 2>&1)
+    dlg_width=$tMIN_DIALOG_WIDTH
+  fi
+
+  # Format text before sending it to whiptail/dialog
+  echo "$msg_text" | fmt --width=$max_text_width > $TMP
+  msg_text="$(cat $TMP)"
+  
+  # Create dialog box, return either errorlevel, "$answer", or both
+  case $dlg_function in
+    msgbox)
+      $DIA --title "$title" --backtitle "$backtitle" \
+      --msgbox "$msg_text" $dlg_height $dlg_width 3>&1 1>&2 2>&3 3>&-
+       status="$?"
+      ;;
+    textbox)
+      $DIA --title "$title" --backtitle "$backtitle" \
+       --textbox $filename --scrolltext $tTEXTBOX_HEIGHT $tTEXTBOX_WIDTH 3>&1 1>&2 2>&3 3>&-
+       status="$?"
+      ;;
+    yesno)
+      $DIA --title "$title" --backtitle "$backtitle" \
+      --yesno " $msg_text" $dlg_height $dlg_width 3>&1 1>&2 2>&3 3>&-
+      status="$?"
+      ;;
+    inputbox)
+      $DIA  --title "$title" --backtitle "$backtitle" \
+      --inputbox "\n$msg_text" $dlg_height $dlg_width "$default_text" 3>&1 1>&2 2>&3 3>&-
+      status="$?"
+      ;;
+    passwordbox)
+      $DIA  --title "PASSWORD" --backtitle "$backtitle" \
+      --passwordbox "\n$msg_text\n\n" $dlg_height $dlg_width "" 3>&1 1>&2 2>&3 3>&-
+      status="$?"
+      ;;
+    *)
+      ErrorMsg "Unknown function ($dlg_function)" "tDlg"
+      return 1
+      ;;
+  esac
+  return $status
+} # End of tDlg 
+
+tCenter_text() {
+  ## Center text for TUI dialogs
+  ## Usage:
+  ##   tCenter_text [width] ["some text"]
+  local width=$(($1 + 2))
+  shift
+  echo "$@" | awk -v w="$width" '
+    {
+    l=length()
+    c=int((w-l)/2)
+    printf "%"(c+l)"s\n",$0
+    }'
+  return 0
+} # End of center_text
+
+tMenu() {
+  ## Generate a TUI menu.  Populates var 'choice' and array 'choice_list[]' (for
+  ## use in checklists).  Called by 'Dlg [MENU]' when GUI=0.
+  ## Usage:
+  ## tMenu {options} function "titlebar text" {"instruction text"}
+
+  # Local variables:
+  declare -a item_list
+  declare -a key_list
+  declare -a tItem
+  declare -a tKey
+  local choice_tmp=
+  local f=
+  local i=
+  local ITEMLIST_TMP=`mktemp /tmp/$FUNCNAME.itemlist.XXXXXX`
+  local KEYLIST_TMP=`mktemp /tmp/$FUNCNAME.keylist.XXXXXX`
+  local max_item_width=
+  local max_key_width=
+  local MENULIST_TMP=`mktemp /tmp/$FUNCNAME.menulist.XXXXXX`
+  local n=
+  local num_answers=
+  local num_records=
+  local OLD_IFS=
+  local old_trap=`trap`
+  local pre_selection_status="no"
+  local selection=0
+  local show_keys="no"
+  local temp_list=
+  local terminal_width=
+  local tMenu_body=
+  local tMenu_header=
+  local tMenu_height=
+  local tMenu_line=
+  local tMenu_tail=
+  local tMenu_width=
+  local total_dlg_width=
+  local total_line_width=
+
+  # Globals:
+  choice=
+  unset choice_list
+  trap "rm -f $TMP; rm -f $MENULIST_TMP; rm -f $KEYLIST_TMP; rm -f $ITEMLIST_TMP" HUP QUIT TERM EXIT
+
+  # Parse arguments
+  if [ "${1:0:1}" = "-" ]; then
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --pre-select|--1)
+          pre_select_status="yes"
+          shift
+          ;;
+        --show-keys|--showkeys|-s)
+          show_keys="yes"
+          shift
+          ;;
+        *)
+          break
+          ;;
+      esac
+    done
+  fi
+
+  local mfunction="$1"
+  local titlebar="$2"
+  local dlg_text="$3"
+
+  # Format instruction text, if present
+  [ ! -z "$dlg_text" ] && dlg_text="\n $dlg_text"
+
+  # Split menu_list into keys array and items array
+  for ((i=0;i<${#menu_list[@]};i++)); do
+    echo "${menu_list[$i]}" >>$MENULIST_TMP
+  done
+
+  get_key_list $MENULIST_TMP > $KEYLIST_TMP
+  key_list=($(cat $KEYLIST_TMP))
+
+  get_item_list $MENULIST_TMP > $ITEMLIST_TMP
+  OLD_IFS=$IFS
+  IFS=$'\n'
+  item_list=($(cat $ITEMLIST_TMP))
+  IFS=$OLD_IFS
+
+  num_records=$(grep -c "" $KEYLIST_TMP)
+
+  tablify $ITEMLIST_TMP  | awk '{gsub(/^[ \t]+|[ \t]+$/,"")};1' > $TMP
+  cat $TMP > $ITEMLIST_TMP
+
+  max_item_width=$(get_width "$ITEMLIST_TMP")
+  max_key_width=$(get_width "$KEYLIST_TMP")
+
+  # Get height & width of dialog window
+  let tMenu_height=($num_records + 6)
+  let tMenu_width=($max_key_width + 2 + $max_item_width + 2)
+
+  # Make sure max height and width are not exceeded
+  if [ ! "$tMAX_DIALOG_HEIGHT" = "0" ]; then
+    [ $tMenu_height -gt $tMAX_DIALOG_HEIGHT ] && tMenu_height=$tMAX_DIALOG_HEIGHT
+  else
+    tMenu_height=$tMIN_DIALOG_HEIGHT
+  fi
+
+  if [ ! "$tMAX_DIALOG_WIDTH" = "0" ]; then
+    tMAX_DIALOG_WIDTH=$(($(tput cols) - 4))
+    [ $tMenu_width -gt $tMAX_DIALOG_WIDTH ] && tMenu_width=$tMAX_DIALOG_WIDTH
+  else
+    tMenu_width=0
+  fi
+
+  # Generate body
+  if [ "$show_keys" = "yes" ]; then
+    OLD_IFS=$IFS
+    IFS=$'\n'
+    tKey=($(cat $KEYLIST_TMP))
+    IFS=$OLD_IFS
+  else 
+    # Convert keys to index numbers
+    for ((i=0;i<$num_records;i++)); do
+      let n=$i+1
+      tKey[$i]=$(printf "$n.")
+      done
+      # Adjust max key width to the number of characters in the last key
+      max_key_width=${#tKey[$(($num_records - 1))]}
+  fi
+  # Limit width of item line because of a bug in whiptail that messes-up the
+  # display if the line is too long for the terminal window
+  total_dlg_width=$(( 3 + $max_key_width + 1 + $max_item_width + 3 ))
+  terminal_width=`tput cols`
+  if [ $terminal_width -lt $total_dlg_width ]; then
+    max_item_width=$(( $terminal_width - ( 4 + $max_key_width + 1 + 7) ))
+  fi
+
+  OLD_IFS=$IFS
+  IFS=$'\n'
+  tItem=($(cat $ITEMLIST_TMP))
+  IFS=$OLD_IFS
+  
+  case $mfunction in
+    menu)
+      selection=        # must be null
+      ;;
+    checklist)
+      [ "$pre_select_status" = "yes" ] && selection=1
+      ;;
+    radiolist)
+      selection=0
+      ;;
+  esac
+
+  # Generate header
+  tMenu_header="$DIA --title \"$titlebar\" --backtitle \"$0\" --$mfunction \"$dlg_text\" $tMenu_height $tMenu_width $tMAX_DIALOG_HEIGHT"
+
+  # Build menu body string    
+  for ((i=0;i<$num_records;i++)); do
+    tMenu_line="\"${tKey[$i]}\" \"${tItem[$i]:0:$max_item_width}\" $selection "
+    tMenu_body="$tMenu_body $tMenu_line"
+  done
+
+  # Generate tMenu tail
+  tMenu_tail="1>&2 2>$TMP"
+
+  # Write to file $MENU_EXEC, make executable
+  printf "" >$MENU_EXEC
+  echo "$SHEBANG" >>$MENU_EXEC
+  printf -- "$tMenu_header $tMenu_body $tMenu_tail" >>$MENU_EXEC
+  chmod +x $MENU_EXEC
+  
+  # Run generated menu code, result is written to $TMP
+  $MENU_EXEC
+  status="$?"; [ ! "$status" = "0" ] && unset menu_list && return $status
+
+  # Process Result
+   if [ "$show_keys" = "yes" ]; then
+    # Return key texts in global array 'choice_list'
+    tmp_list=$(cat $TMP)
+    tmp_list=$(echo $tmp_list | sed 's/ " /|/g' | tr -d '"')
+    tmp_list=$(echo $tmp_list | sed 's/  *$//')
+    num_answers=$(echo $tmp_list | awk -F\| '{ print NF }')
+    for ((i=0;i<$num_answers;i++)); do
+      let f=$i+1
+      choice_list[$i]=$(echo "$tmp_list" | awk -F\| -v field=$f '{ printf $field }')
+      done
+  else
+    # Translate key numbers to key text, store in global array 'choice_list'
+    n=0
+    tmp_list=$(cat $TMP | tr -d '[[:punct:]]')
+    for i in $tmp_list; do
+      let index=$i-1
+      choice_tmp="\"${key_list[$index]}\""
+      choice_list[$n]="$choice_tmp"
+      let n=n+1
+    done
+  fi
+
+  # Use a non-array for the first answer, for menu/radiolist usage
+  choice=$(echo ${choice_list[0]} | tr -d '"')
+  
+  # Check for empty string
+  [ -z "$choice" ] && Dlg ERROR "No choice returned!" && unset menu_list && return 1
+
+  # Clean-up
+  unset menu_list
+  rm -f $MENULIST_TMP; rm -f $KEYLIST_TMP; rm -f $ITEMLIST_TMP
+  eval "$old_trap"
+  return 0
+} # End of tMenu
+
+gMenu() {
+  ## Display menus using Zenity.
+
+  declare -a body_list
+  declare -a item_list
+  declare -a key_list
+  local columns=
+  local dlg_text=
+  local dlg_extra_opt=
+  local gMenu_body=
+  local gMenu_header="$SHEBANG"
+  local gMenu_height=
+  local gMenu_width=
+  local i=
+  local ITEMLIST_TMP=`mktemp /tmp/$FUNCNAME.itemlist.XXXXXX`
+  local KEYLIST_TMP=`mktemp /tmp/$FUNCNAME.keylist.XXXXXX`
+  local max_fields=
+  local MENULIST_TMP=`mktemp /tmp/$FUNCNAME.menulist.XXXXXX`
+  local list_width=
+  local mfunction=
+  local num_dlg_text_lines=0
+  local num_records=
+  local old_trap=`trap`
+  local pre_select_status="FALSE"
+  local show_keys="no"
+  local status=
+  local titlebar=
+  
+  # Globals:
+  choice=
+  unset choice_list
+
+  trap "rm -f $TMP; rm -f $MENULIST_TMP; rm -f $KEYLIST_TMP; rm -f $ITEMLIST_TMP" HUP QUIT TERM EXIT
+  #DebugMsg "args: $@"
+
+  # Parse arguments
+  if [ "${1:0:1}" = "-" ]; then
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --pre-select|--1)
+          pre_select_status="TRUE"
+          shift
+          ;;
+        --show-keys|--showkeys|-s)
+          show_keys="yes"
+          shift
+          ;;
+        *)
+          #DebugMsg "Invalid option '$1' ignored"
+          break
+          ;;
+      esac
+    done
+  fi
+
+  mfunction="$1"
+  titlebar="$2"
+  dlg_text="$3"
+
+  # Convert one-dimensional array of menu entries to 2-D by copying to temp file
+  for ((i=0;i<${#menu_list[@]};i++)); do
+    echo "${menu_list[$i]}" >>$MENULIST_TMP
+  done
+
+  # Normalize number of fields in menu_list.
+  normalize_list "$show_keys" $MENULIST_TMP >$TMP
+  cp -f $TMP $MENULIST_TMP
+
+  # Split list of keys and items and convert to 2-D by copying to temp file
+  get_key_list $MENULIST_TMP > $KEYLIST_TMP
+  key_list=($(quotify $KEYLIST_TMP))
+  get_item_list $MENULIST_TMP > $ITEMLIST_TMP
+  num_records=$(grep -c "" $KEYLIST_TMP)
+
+  # Get number of columns needed.
+  max_fields=$(count_fields $MENULIST_TMP)
+  for ((i=0;i<$max_fields;i++)); do
+    columns="--column \"\" $columns"
+  done
+
+  # Get width of menu contents in characters
+  if [ "$show_keys" = "yes" ]; then
+    tablify $MENULIST_TMP > $TMP
+    list_width=$(get_width $TMP)
+  else
+    tablify $ITEMLIST_TMP >$TMP
+    list_width=$(get_width $TMP)
+  fi
+
+  # Calculate width of window in pixels and normalize
+  gMenu_width=$(printf "%.0f" $(echo "($list_width * $FONT_WIDTH) + ($FIELD_SEP_WIDTH * ($max_fields + 1 )) + $EDGE_WIDTH + 1" | bc))
+  if [ "$gMenu_width" -lt "$gMIN_DIALOG_WIDTH" ]; then
+    gMenu_width=$gMIN_DIALOG_WIDTH
+  elif [ "$gMenu_width" -gt "$gMAX_DIALOG_WIDTH" ]; then
+    gMenu_width=$gMAX_DIALOG_WIDTH
+  fi
+
+  # Format instruction text to fit
+  format_instruction_text_for_dialog "$dlg_text" $gMenu_width >$TMP
+  num_dlg_text_lines=$(grep -c "" $TMP)
+  dlg_text=$(cat $TMP)
+
+  # Calculate height of window and normalize
+  gMenu_height=$(printf "%.0f" $(echo "$TITLEBAR_HEIGHT + ($FONT_HEIGHT * $num_dlg_text_lines) + $HEADER_ROW_HEIGHT + ($MENU_ROW_HEIGHT * $num_records) + $BUTTON_AREA_HEIGHT + 1" | bc ))
+  [ "$gMenu_height" -gt "$gMAX_DIALOG_HEIGHT" ] && gMenu_height=$gMAX_DIALOG_HEIGHT
+  
+  # Make further adjustments according to the menu type.
+  case $mfunction in
+    menu)
+      mfunction="--list"
+      dlg_extra_opt=
+      if [ "$show_keys" = "yes" ]; then
+        body_list=($(quotify $MENULIST_TMP))
+      else
+        body_list=($(quotify $MENULIST_TMP))
+        dlg_extra_opt="--print-column=1 --hide-column=1"
+      fi      
+      ;;
+    checklist|radiolist)
+      if [ "$mfunction" = "radiolist" ]; then
+        pre_select_status="FALSE"
+        mfunction="--list --radiolist"
+        gMenu_width=$((gMenu_width + $RADIOBUTTON_WIDTH))
+      else
+        mfunction="--list --checklist"
+      fi
+      if [ "$show_keys" = "yes" ]; then
+        quotify $MENULIST_TMP > $TMP
+        body_list=($(insertify "$pre_select_status" $TMP))
+        columns="--column \"\" $columns"
+      else
+        quotify $MENULIST_TMP >$TMP
+        body_list=($(insertify "$pre_select_status" $TMP))
+        dlg_extra_opt="--print-column=2 --hide-column=2"
+        columns="--column \"\" $columns"
+      fi
+      ;;
+    *)
+      ErrorMsg "Invalid function '$mfunction'" $FUNCNAME
+      return 1
+      ;;
+  esac
+
+  # Build body of menu.
+  gMenu_body="zenity --title=\"$titlebar\" --text=\"$dlg_text\" $mfunction --height=$gMenu_height --width=$gMenu_width $dlg_extra_opt $columns ${body_list[@]}"
+
+  # Write and execute menu script.
+  echo -e "$gMenu_header\n\n$gMenu_body" > $MENU_EXEC
+  chmod +x $MENU_EXEC
+  $MENU_EXEC >$TMP
+  status="$?"
+
+  # Process results, store in choice (for one selection), or choice_list array.
+  if [ "$status" = "0" ]; then
+    OLD_IFS=$IFS
+    IFS=$'|'
+    choice_list=($(cat $TMP))
+    IFS=$OLD_IFS
+    choice=${choice_list[0]}
+  fi
+
+  unset menu_list
+  rm -f $MENULIST_TMP; rm -f $KEYLIST_TMP; rm -f $ITEMLIST_TMP
+  eval "$old_trap"
+  return $status
+} # End of gMenu
+
+cliMenu() {
+  ## Command-line menu tool.  Usually called by Dlg().  Returns key value
+  ## from $menu_list[ ], or an array of values in $choice_list[ ].
+  ## Usage:
+  ## cliMenu [options] "function" "title" "text"
+  ##
+  ## Options:
+  ##   --show-keys=[yes|no(default)]
+
+  # Local variables
+  declare -a item_list
+  declare -a key_list
+  local answer=
+  local dlg_text=
+  local i=
+  local ITEMLIST_TMP=`mktemp /tmp/$FUNCNAME.itemlist.XXXXXX`
+  local KEYLIST_TMP=`mktemp /tmp/$FUNCNAME.keylist.XXXXXX`
+  local MENULIST_TMP=`mktemp /tmp/$FUNCNAME.menulist.XXXXXX`
+  local mfunction=
+  local num_records
+  local OLD_IFS=
+  local old_trap=`trap`
+  local show_keys="no"
+  local titlebar=
+  local linesperpage=34
+
+  # Global variables
+  unset choice_list
+  choice=
+
+  # Set new trap
+  trap "rm -f $TMP; rm -f $MENULIST_TMP; rm -f $KEYLIST_TMP; rm -f $ITEMLIST_TMP" HUP QUIT TERM EXIT
+  #DebugMsg "args: $@"
+
+  # Parse arguments
+  if [ "${1:0:1}" = "-" ]; then
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --show-keys|--showkeys|-s)
+          show_keys="yes"
+          shift
+          ;;
+        *)
+          break
+          ;;
+      esac
+    done
+  fi
+
+  mfunction="$1"
+  titlebar="$2"
+  dlg_text="$3"
+
+  # Init TEMP file and dump menu_list into it
+  printf "" >$TMP
+  for ((i=0;i<=${#menu_list[@]};i++)); do
+    echo "${menu_list[$i]}" >>$TMP
+  done
+
+  # Split menu_list into keys array and items array
+  for ((i=0;i<${#menu_list[@]};i++)); do
+    echo "${menu_list[$i]}" >>$MENULIST_TMP
+  done
+
+  OLD_IFS=$IFS
+  IFS=$'\n'
+  get_key_list $MENULIST_TMP > $KEYLIST_TMP
+  key_list=($(cat $KEYLIST_TMP))
+  get_item_list $MENULIST_TMP > $ITEMLIST_TMP
+  item_list=($(cat $ITEMLIST_TMP))
+  IFS=$OLD_IFS
+
+  num_records=$(grep -c "" $KEYLIST_TMP)
+
+  # Output menu and prompt for answer
+  [ -e $TMP ] && rm -f $TMP
+  drawline "=-" green
+  center_text "$titlebar" >&2
+  drawline "=-" green
+  if [ ! -z "$dlg_text" ]; then
+    echo "" >&2
+    echo -e "$dlg_text" | fmt --width=$(tput cols) >>$TMP
+  fi
+  echo "" >>$TMP
+  linesperpage=$((`tput lines` - 5))
+  [ $linesperpage -lt 5 ] && ErrorMsg "Terminal screen is too small!" && return 1
+  case "$show_keys" in
+    yes)
+      tablify $MENULIST_TMP | awk '{ print NR". "$0 }' >>$TMP
+      cat $TMP | more -$linesperpage
+      ;;
+    *)
+      tablify $ITEMLIST_TMP | awk '{ print NR". "$0 }' >>$TMP
+      cat $TMP | more -$linesperpage
+
+      ;;
+  esac
+  if [ $mfunction = "checklist" ]; then
+    echo "" >&2
+    echo "Enter multiple choices as numbers, separated by spaces. ex. '1 2 5 7' etc." >&2
+  fi
+  answer=$(tPrompt)
+  [ $? == 1 ] && return 1
+
+  # Process $answer
+  case "$mfunction" in
+    menu|radiolist)
+      answer=$(echo $answer | sed 's/[^[:digit:]]/ /g' | awk '{ print $1 }')
+      DebugMsg "filtered answer = $answer"
+      [ -z "$answer" ] && return 255
+      [ $answer -gt ${#key_list[@]} ] && ErrorMsg "Invalid input!" && return 222
+      DebugMsg "key_list 0 = ${key_list[0]}"
+      choice="${key_list[$(($answer - 1))]}"
+      ;;
+    checklist)
+      DebugMsg "answer=$answer"
+      printf "" >$TMP
+      answer=$(echo $answer | sed 's/[^[:digit:]]/ /g')
+      [ -z "$answer" ] && return 255
+      for i in $answer; do
+        echo $i >>$TMP
+      done
+      n=0
+      for i in $(sort $TMP | uniq); do
+        [ $i -gt ${#key_list[@]} -o $i -le 0 ] && WarningMsg "Ignoring: '$i': Out of range!" && continue
+        choice_list[$n]="${key_list[$(($i - 1))]}"
+        let n++
+      done
+      choice="${choice_list[0]}"
+      [ "${#choice_list[@]}" -eq "0" ] && ErrorMsg "Invalid input!" && return 222
+      ;;
+    *)
+      ErrorMsg "Unknown function, '$mfunction'" $FUNCNAME
+      return 1
+      ;;
+  esac  
+  
+  return 0
+} # End of CliMenu
+
+cliDlg() {
+  ## Command-line only dialog functions
+  local mfunction=$1
+  local dlg_text="$2"
+  local default_text="$3"
+  local linesperpage=34
+  
+  case $mfunction in
+    info)
+      setcolor blue >&2
+      drawline "-" >&2
+      center_text "INFO" >&2
+      drawline "-" >&2
+      setcolor normal >&2
+      [ -e $TMP ] && rm -f $TMP
+      linesperpage=$((`tput lines` - 5))
+      [ $linesperpage -lt 5 ] && ErrorMsg "Terminal screen is too small!" && return 1
+      echo -e "$dlg_text" | fmt --width=$(tput cols) >$TMP
+      cat $TMP | more -$linesperpage
+      drawline "-" blue >&2
+      [ ! "$?" = "0" ] && return 1
+      ;;
+    question)
+      INT=
+      while [ -z "$INT" ]; do
+        drawline "-" >&2
+        center_text "QUESTION" >&2
+        drawline "-" >&2
+        echo -e "$dlg_text" | fmt --width=$(tput cols) >&2
+        answer=$(tPrompt "(O)K or [C]ancel")
+        case `echo ${answer:0:1} | tr '[:upper:]' '[:lower:]'` in
+          o)
+            return 0
+            ;;
+          *)
+            return 1
+            ;;
+        esac
+      done
+      ;;
+    error)
+      setcolor red >&2
+      drawline "#" >&2
+      center_text "ERROR" >&2
+      drawline "#" >&2
+      echo -e "$dlg_text" | fmt --width=$(tput cols) >&2
+      drawline "#" >&2
+      setcolor normal >&2
+      ;;
+    warning)
+      setcolor yellow
+      drawline ">"
+      center_text "WARNING"
+      drawline "<"
+      echo -e "$dlg_text" | fmt --width=$(tput cols)
+      drawline "=-"
+      setcolor normal
+      ;;
+    entry)
+      setcolor purple >&2
+      drawline ":" >&2
+      center_text "ENTRY" >&2
+      drawline ":" >&2
+      echo -e "$dlg_text" | fmt --width=$(tput cols) >&2
+      setcolor normal >&2
+      tPrompt "" "$default_text"
+      status=$?; [ ! "$status" = "0" ] && return $status
+      ;;
+    passwordbox)
+      setcolor purple >&2
+      drawline "*" >&2
+      center_text "PASSWORD REQUIRED" >&2
+      drawline "*" >&2
+      echo -e "$dlg_text" | fmt --width=$(tput cols) >&2
+      echo "" >&2
+      drawline ". " >&2
+      setcolor normal >&2
+      echo "" >&2
+      read -s -p "Password:" answer >&2
+      echo "" >&2
+      [ -z "$answer" ] && return 255
+      echo $answer >&1
+      ;;
+    text)
+      DebugMsg "$2"
+      linesperpage=$((`tput lines` - 5))
+      [ $linesperpage -lt 5 ] && ErrorMsg "Terminal screen is too small!" && return 1
+      cat $2 | more -$linesperpage
+      ;;
+    *)
+      ErrorMsg "Unknown function, '$mfunction'" $FUNCNAME
+      return 1
+  esac
+return 0
+} # End of cliDlg
+
+tPrompt() {
+  ## Prompt user for input.  For terminal only.  Populates global
+  ## variable '$answer'.  Will also echo choice to stdout, unless --quiet
+  ## option is used.  Returns exit codes 1 if user enters "exit", or 255
+  ## if user presses enter to accept the default.
+  ## Usage:
+  ## tPrompt [OPTIONS] "Some text" {default}
+  ##          -b|--bold-prompt     Use bold text for prompt
+  ##          -n|--no-exit-msg     Do not show 'exit' message
+  ##          -q|--quiet           Do not echo answer
+
+  local quiet="no"
+  local exitprompt="yes"
+  local bold="no"
+  local answer=
+
+  # Parse Options
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -q|--quiet)
+        quiet="yes"
+        shift
+        ;;
+      -n|--no-exit-msg)
+        exitprompt="no"
+        shift
+        ;;
+      -b|--bold-prompt)
+        bold="yes"
+        shift
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  local default=
+  local text="$1"
+  local status=0
+  [ ! -z "$2" ] && default="$2" 
+  if [ "$exitprompt" = "yes" ]; then
+    echo "" >&2
+    echo "( Type 'exit' to abort )" >&2
+    drawline ". " >&2
+  fi
+  [ "$bold" = "yes" ] && setcolor bold >&2
+  echo -e "$text" | fmt --width=$(tput cols) >&2
+  [ "$bold" = "yes" ] && setcolor normal >&2
+  [ ! -z "$default" ] && printf "[ $default ] " >&2
+  printf "> " >&2
+  read answer
+  [ "$answer" = "" ] && answer="$default" && status=255
+  case $answer in exit|EXIT) return 1 ;; esac
+  [ "$quiet" = "no" ] && echo "$answer" >&1 && return $status
+  return $status
+} # End of tPrompt
+
+pause() {
+  ## Wait for user to press ENTER key or Click 'OK'.
+    case $GUI in
+      0)
+        Dlg INFO "Press ENTER to Continue"
+        return $?
+        ;;
+      1)
+        Dlg INFO "Click OK to Continue"
+        return $?
+        ;;
+      *)
+        tPause
+        return $?
+        ;;
+    esac
+} # End of pause
+
+tPause() {
+  ## Wait for user to press ENTER key.  Terminal only.
+  read -p "$(center_text '-= Press ENTER to continue =-')"
+  return 0
+} # End of tPause
+
+get_width() {
+  ## Print the maxium width of a line or a list to stdout.
+  awk 'BEGIN { FS = "|" } { if ( l < length() ) l = length() } END { print l }' $1
+  return 0
+} # End of get_width
+
+get_key_list() {
+  ## Print all keys (first fields of '|' separated list) to stdout.
+  awk 'BEGIN { FS = "|" } { print $1 }' $1
+  return 0
+} # End of get_key_list
+
+get_item_list() {
+  ## Omit keys from '|' separated list in file $1, print the rest to stdout.
+  awk '
+  BEGIN { FS="|" } 
+  {
+  if ( NF == 1 )
+    printf $1"\n"
+  for ( i = 2; i <= NF; i++ )
+    { if ( i == NF )
+    printf $i"\n"
+  else 
+    printf $i"|" 
+    } 
+  }' $1
+  return 0
+} # End of get_item_list
+
+tablify() {
+ ## Arrange "|"-separated fields in file $1 into a table.
+ awk '
+ BEGIN { FS = "|" }
+  {
+    for ( r = 1; r <= NR; r++ )
+      {
+      for ( i = 1; i <= NF; i = i + 1 )
+        {
+        if ( max_nr < NR ) max_nr = NR
+        l = length($i)
+        c = column[i]
+        item[i, r] = $i
+        if ( l > c ) column[i] = length($i)   
+        }
+      getline
+      }
+  for ( i in column )
+    n++
+
+  for (y = 1; y <= max_nr; y++ )
+    {
+    printf ""
+    for ( x = 1; x <= n; x++ )
+      {
+      printf ( "%-*s  ", column[x], item[x, y] )
+      }
+    print ""
+    }
+  }' "$1"
+return 0
+} # End of tablify
+
+quotify() {
+  ## Add double-quotes to each line in file $1, print to stdout
+  # Parse arguments
+
+  local whole_line="no"
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -l|--line)
+        whole_line="yes"
+        shift
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  case "$whole_line" in
+    yes)
+      awk '
+        {
+        print "\""$0"\"" 
+        }' $1
+      ;;
+    *)
+      awk '
+        BEGIN { FS = "|" }
+          {
+          for ( i = 1; i <= NF; i++ )
+            printf "\""$i"\" "
+          printf "\n"
+          }' "$1"
+      ;;
+  esac
+  return 0
+} # End of quotify
+
+insertify() {
+  ## Insert an UN-quoted string into a quoted list after first quoted item
+  ## example:
+  ## "one" INSERTED TEXT "two" "three"...
+  sed "s/^/$1 /" $2
+} # End of insertify
+
+count_fields() {
+  ## Count the max number of "|"-seperated fields in a file.
+  awk '
+    BEGIN { FS = "|"; count = 0 }
+
+    {
+    if ( NF > count )
+      count = NF
+    }
+
+    END { print count } ' "$1"
+}
+
+normalize_list() {
+  ## If a list has only one field, copy the first field to the second, 
+  ## separated by '|', unless $1=yes.  Also, equalize the number of fields in 
+  ## all lines of file $2.
+  local show_keys="$1"
+  local n=$(count_fields $2)
+  awk -v n=$n -v sk=$show_keys 'BEGIN { FS = "|"; start=1 }
+    {
+    printf $0
+    if ( NF < n )
+      {
+      if ( sk != "yes" )
+        {
+        if ( NF == 1 )
+          {
+          printf FS$0
+          start=2
+          }
+        }
+      for (i=start; i<=(n - NF); i++)
+        printf FS 
+      }
+    printf "\n"
+    }' $2
+return 0
+} # End of normalize list
+
+pad_text() {
+  ## Add spaces to the end of a line of text up to a specified column width, 
+  ## write to stdout.
+  ## Usage:
+  ## pad_text "Some text..." [minium width]
+  echo -e "$1" | awk -v w=$2 '{
+    printf ("%-*s\n", w, $0)
+    }'
+  return 0
+} # End of pad_text
+
+center_text() {
+  ## Center text in the terminal
+  echo "$1" | awk -v w=$(tput cols) '
+    {
+    l=length()
+    s=int((w-l)/2)
+    printf "%"(s+l)"s\n",$0
+    }'
+} # End of center_text
+
+format_instruction_text_for_dialog() {
+  ## Output formatted text to stdout
+  ## $1: text to be formatted
+  ## $2: maximum width in pixels (including edges of window)
+  local text="$1"
+  local max_width="$2"
+  local text_width=
+  text_width=$(printf "%.0f" $(echo "(${#text} * $FONT_WIDTH) + $EDGE_WIDTH + 1" | bc))
+  if [ "$text_width" -gt "$max_width" ]; then
+    w=$(printf "%.0f" $(echo "($max_width / $FONT_WIDTH) + 1" | bc))
+    echo -e "$text" | fmt --split-only --width=$w
+  else
+    echo "$text"
+  fi
+  return 0
+}
+
+task_exec() {
+  ## Execute a sequence of interactive commands or functions.  Used to make
+  ## menus go forward, backward, or stay in place depending on the exit code
+  ## of the command or function being executed.  An exit code of 1 goes back
+  ## one level, and an exit code of 0 goes forward.  222 means "stay in place",
+  ## and any other number means "go back x places in the list".  Currently,
+  ## this function cannot accept arguments.
+  ##
+  ## Usage:
+  ## task_exec [task1] [task2] [task3]...
+  ##   
+  ## NOTE: Typical usage:
+  ## 
+  ##  tasks=(\
+  ##  name_of_function_1 \
+  ##  name_of_function_2 \
+  ##  name of function_3...)
+  ##
+  ##  task_exec "${tasks[@]}"
+  ##  status="$?"; [ ! "$status" = "0" ] && return $status
+  ##
+
+	[ ! -z "$1" ] && local tasks=("$@")
+	local level=0
+	local units=${#tasks[*]}
+	local status=
+
+	# Use $level as a pointer to the menu unit to be processed
+  while true; do
+    if [ "$level" -lt "0" ]; then 
+      unset tasks
+      return 1
+    fi
+		${tasks[$level]}
+	  status=$? 
+    case $status in
+		  0) # Increment $level
+		    let level=$level+1 
+        [ $level -ge $units ] && break
+		    ;;
+      1) # Decrement $level
+        if [ "$GUI" = "1" ]; then
+          let level=$level-1 
+        else
+          return 1
+        fi
+        ;;
+		  222) # Special code -- No change in level
+		    ;;
+		  254)  # Emergency Exit
+		    return 254
+		    ;;
+      255)  # ESC
+        #[ $level -eq "0" ] && return 222
+        [ $level -eq "0" ] && return 255
+        let level=$level-1 
+         #echo "level -1 = $level"
+        ;;
+      *)  # Go back $status levels
+        let level=$level-$status
+        ;;
+	  esac
+	done
+  return 0
+} # End of task_exec
+
+progress_meter() {
+
+  ## TODO Make this an awk script instead!
+  ## A simple progress bar for the terminal.
+  ## Usage:
+  ## progress_meter [n] {red|green|blue|yellow}
+  ## ** 'n' is a number
+
+  [ ! -z $2 ] && setcolor $2
+  local percent=
+  local fpercent=$1
+  local remaining=
+  local cells=
+  local columns=
+  local i=
+
+  # Progress Indicator
+  percent=`printf '%.0f' "$fpercent"`
+  columns="$(tput cols)"
+  cells=$(($columns - 14))
+  printf '%4s %3s%% %2s' "   [" "$percent" "]["
+  progress=$(echo "scale=2;($percent/100)*$cells" | bc)
+  progress=$(printf '%.0f' $progress)
+  for ((i=0;i<progress;i=i+1)); do
+    printf "#"
+  done
+  printf ">"
+  remaining=$(($cells - $progress))
+  for ((i=1;i<=remaining;i=i+1)); do
+    printf "-"
+  done
+  printf "]\r"
+  [ ! -z $2 ] && setcolor normal
+} # End of progress meter
+
+pre_selection() {
+  ## Generate a menu asking whether all folders should be pre-selected, or none.
+  ## This is needed because zenity has no pre-selection option.
+  ## Echo choice to stdout
+
+  unset choice
+  menu_list=(\
+  "0|Pre-select all folders" \
+  "1|Do not pre-select any folders")
+
+  Dlg RADIOLIST "$(basename $0)" "Would you like to pre-select all folders?"
+  status="$?"; [ ! "$status" = "0" ] && return 1
+
+  echo $choice
+
+  return 0
+} # End of pre_selection
+
+clean_output() {
+  ## Remove residual ansi color codes using sed
+  local msg_text="$(echo -e "$@" | sed 's/\x1b\[[0-9]\{1,2\}\(;[0-9]\{1,2\}\)\{0,2\}m//g')"
+  echo "$msg_text"
+  return 0
+} # End of clean_output
+
+choose_folders() {
+  ## Display a list of folders for user to select from in a checklist menu,
+  ## or select all folders in image root; echo to stdout
+  local option=
+  local user_select=0           # true
+  local pre_selection_status=1  # false
+  unset selection_list
+  
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -a|--all)
+        user_select=1
+        shift
+        ;;
+      -p|--pre-select)
+        pre_selection_status=0
+        shift
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  if [ "$user_select" = "1" ]; then
+    # Select all folders
+    get_folder_list "$true_source_path" >$TMP
+    selection_list=($(cat $TMP | awk 'BEGIN { FS = "|" } { print $1 }' ))
+    if [ -z "${selection_list[0]}" ]; then
+      ErrorMsg "No image folders found in '$true_source_path'!"
+      return 1
+    fi
+  else
+    # User selects folders
+    [ "$pre_selection_status" = "0" ] && option="--1"
+    selection_list=($(select_folders $option "$true_source_path"))
+    status=$?; [ ! "$status" = "0" ] && unset selection_list && return $status
+    if [ -z "${selection_list[0]}" ]; then
+      Dlg ERROR "No folders were selected!"
+      return 222
+    fi
+  fi
+  
+  DebugMsg "${selection_list[@]}"
+
+  for i in ${selection_list[@]}; do
+    echo $i
+  done
+
+  return 0
+} # End of choose_folders

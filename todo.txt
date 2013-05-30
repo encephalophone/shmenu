@@ -1,0 +1,9 @@
+To Do
+
+Fix height issue with zenity dialogs
+
+Allow user to specify different GUI applications like xdialog and gdialog in the config file; allow user to choose TUI (whiptail or dialog, mainly)--if it works.
+
+Test with kshell and cshell
+
+

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Wrap-up for shellmenu
+
+#f=($(ls | egrep -v "~" ))
+
+f=$(ls)
+
+tar -cf ~/Dropbox/devscripts/shellmenu/shellmenu_`date +%y%m%d`.tar ${f[*]}
