@@ -15,6 +15,6 @@ Pre-requisites:
   bc
 
 
-One of the following is recommended.
+One of the following is recommended, but not required.
   whiptail
   zenity
