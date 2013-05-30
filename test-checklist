@@ -56,6 +56,8 @@ usage_help() {
 
 # Initialize variables and arrays
 INT=0
+option1=$null
+option2=$null
 Lorem="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
 Curabitur="Curabitur risus lectus, suscipit quis ultrices hendrerit, mollis ac risus."
 Ut_vitae="Ut vitae auctor massa."
@@ -91,23 +93,28 @@ done
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 while [ ! $INT = 1 ]; do
+# Reset option variable
+option=$null
 
   menu_list=(\
     "submenu_no_option|Dlg CHECKLIST [Title] [List description]"
     "submenu_show_keys|Dlg --show-keys CHECKLIST [Title] [List description]"
-    "submenu_pre_select|Dlg --pre-select CHECKLIST [Title] [List description]")
-    
+    "submenu_pre_select|Dlg --pre-select CHECKLIST [Title] [List description]"
+    "submenu_both|Dlg --show-keys --pre-select CHECKLIST [Title] [List description]")
   Dlg MENU "$scriptname" "CHECKLIST Menu Syntax Demo - Choose From the Following:"  
     
   case $choice in
     submenu_no_option)
-      submenu_option=$null
+      : # Do nothing
       ;;
-     submenu_show_keys)
-      submenu_option="--show-keys"
+    submenu_show_keys)
+      option="--show-keys"
       ;;
-     submenu_pre_select)
-      submenu_option="--pre-select"
+    submenu_pre_select)
+      option="--pre-select"
+      ;;
+    submenu_both)
+      option="--show-keys --pre-select"
       ;;
     *)
       echo "No Selection"
@@ -122,8 +129,8 @@ while [ ! $INT = 1 ]; do
     "test_item_four|Item Four|4d|dates|$Proin"
     "test_item_five|Item Five|5e|emblic|$Curabitur"
     "test_item_six|Item Six|6f|fig|$Pellentesque")
-    
-  Dlg $submenu_option CHECKLIST "$scriptname" "CHECKLIST with Formatted Items"
+  
+  Dlg $option CHECKLIST "$scriptname" "CHECKLIST with Formatted Items"
   [ ! $? = 0 ] && INT=1
   
   n=0
@@ -138,7 +145,7 @@ while [ ! $INT = 1 ]; do
     Dlg INFO "The lowest-numbered choice you made is $first_answer.  The full list is: ${answer_array[*]}"
   else
     Dlg INFO "No Selection"
-    INT=1
+    INT=0
   fi
 
 done

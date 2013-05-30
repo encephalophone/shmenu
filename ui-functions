@@ -221,7 +221,7 @@ Dlg() {
   pre_selection_status=
   dlg_extra_opt=
   show_keys=
-  local options=
+  local options=$null
 
   # Parse options
   if [ "${1:0:1}" = "-" ]; then
@@ -593,7 +593,7 @@ tMenu() {
   local num_records=
   local OLD_IFS=
   local old_trap=`trap`
-  local pre_selection_status="no"
+  local pre_select_status="no"
   local selection=0
   local show_keys="no"
   local temp_list=
@@ -708,7 +708,7 @@ tMenu() {
   
   case $mfunction in
     menu)
-      selection=        # must be null
+      selection=$null # must be null
       ;;
     checklist)
       [ "$pre_select_status" = "yes" ] && selection=1
@@ -767,7 +767,7 @@ tMenu() {
   choice=$(echo ${choice_list[0]} | tr -d '"')
   
   # Check for empty string
-  [ -z "$choice" ] && Dlg ERROR "No choice returned!" && unset menu_list && return 1
+  [ -z "$choice" ] && unset menu_list && return 1
 
   # Clean-up
   unset menu_list

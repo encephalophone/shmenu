@@ -112,6 +112,8 @@ done
 ###   "two|pineapples|strawberries|star fruits")
 
 while [ ! $INT = 1 ]; do
+# Reset option variable
+option=$null
 
   menu_list=(\
     "submenu_no_option|Dlg MENU [Title] [List description]"
@@ -146,8 +148,8 @@ while [ ! $INT = 1 ]; do
   if [ ! -z "$choice" ]; then
     Dlg INFO "You chose the item with the key value: '$choice'"
   else
-    echo "No Selection"
-    tPause
+    Dlg INFO "No Selection"
+    INT=0
   fi
 
 done

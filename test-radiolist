@@ -91,6 +91,8 @@ done
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 while [ ! $INT = 1 ]; do
+# Reset option variable
+option=$null
 
   menu_list=(\
     "submenu_no_option|Dlg RADIOLIST [Title] [List description]"
@@ -125,7 +127,7 @@ while [ ! $INT = 1 ]; do
     Dlg INFO "You selected $choice"
   else
     Dlg INFO "No Selection"
-    INT=1
+    INT=0
   fi
 
 done
