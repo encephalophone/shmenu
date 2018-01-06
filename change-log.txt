@@ -1,0 +1,52 @@
+Change-Log
+
+Wed 12 Aug 2015 12:20:29 AM EDT 
+1. ui-functions
+1.1 Changed code in self-documenting feature:  escape parenthesis in regular expression.  Otherwise, "()" has special meaning.
+1.2 Enclosed curly braces in brackets to make the expression more portable
+1.3 added greedy matching with end-of-line anchor so that a line beginning with a close curly brace would be matched no matter what characters follow.
+OLD CODE
+egrep -e "() {$" -e "^}" -e "^ *##.*" $0 | \
+END OLD CODE
++NEW CODE
+egrep -e "\(\) [{]$" -e "^[}].*" -e "^ *##.*" $0 | \
+-END NEW CODE
+1.4. Added comment to end-of-function bracket
++OLD CODE
+}
+-END OLD CODE
++NEW CODE
+} # End of format_instruction_text_for_dialog
+-END NEW CODE
+1.5 Removed a blank line from documentation comments of task_exec() function.
+
+2. Updated ui-functions.doc by running
+<code>
+./ui-functions > ui-functions.doc
+</code>
+
+Wed 12 Aug 2015 11:41:28 PM EDT 
+1.0 Renamed all test-xxx files to demo-xxx.
+2.0 Fixed bug in demo-drawline, title of color select was "--show-keys".  The switch "--show-keys" is only valid on radiolist and checkbox dialogs.  Replaced switch with "Color Selection".
+3.0 demo-entry: added tPause after echoing entry text to the terminal, otherwise the screen would go right back to the top of the loop and show the dialog again.
+4.0 Fixed typos in ui-functions/Dlg().
+5.0 In ui-functions, added space between ) and { on line 386, beginning of gDlg function. This caused the function name to not show in documentation output.
+
+Sun 23 Aug 2015 02:05:25 PM EDT 
+1.0 Renamed 'shellmenu.conf' to 'shmenu.conf'
+2.0 Updated all occurances of 'shellmenu.conf' to 'shmenu.conf' in all scripts
+3.0 Updated demo script headers
+
+Sat 11 Mar 2017 08:36:16 AM EST 
+1.0 ui-functions: Added "2>/dev/null" to end of each line that calls zenity in order to supress the message "Gtk-Message: GtkDialog mapped without a transient parent. This is discouraged", which in this case is a useless warning.
+2.0 added args to demo script for specifying which type of interface to use: -g|--gui, -t|--tui, -c|--cui|--cli, writes change to shmenu.conf
+3.0 Moved shellmenu.err log to local directory instead of /var/log, because we will not always be running as super user.
+
+Sun 12 Mar 2017 10:35:58 AM EDT 
+1.0 added code to force TUI if zenity is not available & force cli mode if whiptail not available.
+
+Sun 26 Mar 2017 09:25:10 PM EDT 
+1.0 Fixed redirection error in shmenu.conf:  > /dev/null 2>&1
+
+Wed 12 Apr 2017 10:27:14 PM EDT 
+1.0 Fixed demo-text so that contents of file is displayed.

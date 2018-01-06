@@ -2,9 +2,9 @@
 
 ###============================================================================
 ###
-###         FILE:  moretest
+###         FILE:  demo-drawline
 ###
-###        USAGE:  moretest
+###        USAGE:  demo-drawline
 ###
 ###  DESCRIPTION:  Test various features of shellmenu for debugging
 ###
@@ -56,6 +56,8 @@ usage_help() {
 
 # Initialize variables and arrays
 INT=0
+pattern=$null
+color=$null
 
 # Parse command-line parameters
 
@@ -84,26 +86,25 @@ done
 # MAIN
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-  menu_list=(\
-  "one|alskdjlakjdf"
-  "two|alskdjflaksjfal"
-  "three|asldkfjalksdjalkfj"
-  "four|aslkdjfalksdjalkfj"
-  "five|alskdjfalksdjla"
-  "six|alskdjfalksjdfl;akjsdl;akfj"
-  "seven|alskdjfalksdjflaksjdflajsdlkasjdf"
-  "eight|alskdjfalksdfjlaksjal;ksfjlaksjf;laksdjf;laksjf;lakj"
-  "nine|alsdkjnmwnalwke lkwen lwkenr lwkenl;kwne r;weln"
-  "ten|alksdjflkaj l;kej l;kawej lfkv alklknl;4r jalkjzl;xckj"
-  "eleven|alksdfj lkej;lkwejr lkwejr lkj welkrj lwekjr wel;k "
-  "tweleve|alsdkfj lkj l;kwja l;kasjd fl;kaj elkja "
-  "thirteen|laskdflakj lwekjr lwekj l;skjflakj lk jl; j"
-  "fourteen|laksd jf"
-  "fifteen|alskd alskj lakj lakf lka l lkjaslkflkasjdfl; ak alskd jf"
-  "sixteen|oweirlkasnmf oaijer klfm4i tlkmoiet ;oiwej"
-  "seventeen|sad lkj 4weiroquweir ql;kmwer q4 lkjoijwe r"
-  "eighteen|asldkj o4iwer qoaj32o;ijl;34j oialwkejoij4o3 ij"
-  "nineteen|23o9i4 l2k3joi23ij oi2j"
-  "twenty|aslkdj lw4je rli2j lkjw eoi2lkj roisl;scvos9iuoiejr l")
-  
-  Dlg CHECKLIST "This is a test"
+
+
+pattern=$(Dlg ENTRY "What text pattern would you like to repeat to make the line?")
+[ -z $pattern ] && ErrorMsg "No pattern was entered.  Exiting." && exit 0
+
+menu_list=(\
+ "red"
+ "blue"
+ "yellow"
+ "green"
+ "purple"
+ "bold")
+
+Dlg MENU "Select Color" "What color would you like the line pattern to be?"
+[ -z "$choice" ] && WarningMsg "No color was entered.  That's OK, we do not have to set a color"
+color=$choice # for clarity
+
+
+drawline "$pattern" "$color"  # if $color is null, that's OK.
+tPause
+
+

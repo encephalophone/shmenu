@@ -2,9 +2,9 @@
 
 ###============================================================================
 ###
-###         FILE:  moretest
+###         FILE:  demo-setcolor
 ###
-###        USAGE:  moretest
+###        USAGE:  demo-setcolor
 ###
 ###  DESCRIPTION:  Test various features of shellmenu for debugging
 ###
@@ -84,26 +84,28 @@ done
 # MAIN
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+# setcolor demo
+
+while [ ! $INT = 1 ]; do
+
   menu_list=(\
-  "one|alskdjlakjdf"
-  "two|alskdjflaksjfal"
-  "three|asldkfjalksdjalkfj"
-  "four|aslkdjfalksdjalkfj"
-  "five|alskdjfalksdjla"
-  "six|alskdjfalksjdfl;akjsdl;akfj"
-  "seven|alskdjfalksdjflaksjdflajsdlkasjdf"
-  "eight|alskdjfalksdfjlaksjal;ksfjlaksjf;laksdjf;laksjf;lakj"
-  "nine|alsdkjnmwnalwke lkwen lwkenr lwkenl;kwne r;weln"
-  "ten|alksdjflkaj l;kej l;kawej lfkv alklknl;4r jalkjzl;xckj"
-  "eleven|alksdfj lkej;lkwejr lkwejr lkj welkrj lwekjr wel;k "
-  "tweleve|alsdkfj lkj l;kwja l;kasjd fl;kaj elkja "
-  "thirteen|laskdflakj lwekjr lwekj l;skjflakj lk jl; j"
-  "fourteen|laksd jf"
-  "fifteen|alskd alskj lakj lakf lka l lkjaslkflkasjdfl; ak alskd jf"
-  "sixteen|oweirlkasnmf oaijer klfm4i tlkmoiet ;oiwej"
-  "seventeen|sad lkj 4weiroquweir ql;kmwer q4 lkjoijwe r"
-  "eighteen|asldkj o4iwer qoaj32o;ijl;34j oialwkejoij4o3 ij"
-  "nineteen|23o9i4 l2k3joi23ij oi2j"
-  "twenty|aslkdj lw4je rli2j lkjw eoi2lkj roisl;scvos9iuoiejr l")
+    "red|setcolor red"
+    "blue|setcolor blue"
+    "yellow|setcolor yellow"
+    "green|setcolor green"
+    "purple|setcolor purple"
+    "bold|setcolor bold")
+    
+    Dlg MENU "Test" "Demo: 'setcolor' function"
+    [ ! $? = 0 ] && set INT=1
+    if [ ! -z "$choice" ]; then
+      setcolor $choice
+      echo "If you have a color terminal, this text will be in $choice."
+      setcolor $normal
+      tPause
+    else
+      echo "No Selection"
+      INT=1
+    fi
   
-  Dlg CHECKLIST "This is a test"
+done

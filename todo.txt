@@ -1,9 +1,49 @@
 To Do
 
-Fix height issue with zenity dialogs
+* Fix height issue with zenity dialogs
 
-Allow user to specify different GUI applications like xdialog and gdialog in the config file; allow user to choose TUI (whiptail or dialog, mainly)--if it works.
+* Allow user to specify different GUI applications like xdialog and gdialog in the config file; allow user to choose TUI (whiptail or dialog, mainly)--if it works.
 
-Test with kshell and cshell
+* Test with kshell and cshell
 
+* Test with Debian, Fedora, Centos, etc. and document any problems.
 
+* [TOP PRIORITY] Rename shellmenu.conf to shmenu.conf and change all instances of "shellmenu.conf" in every file to "shmenu.conf"
+
+* Write a script to check dependencies and make any changes that are needed.  Should be able to work in Debian, Ubuntu, Fedora, Centos, perhaps others.
+
+* Proofread all ui-functions comments, update, and then update documentation.
+
+* Write a user guide.
+
+* Add dialog to the list of requirements.
+
+* Add stty to list of requirements.
+
+* Research other requirements I might have forgotten.
+
+* Throw error from config source if GUI=0 and tput not present
+
+* Need way to reset default config values, esp. font size constants.
+
+* Should stty or tput need sanity checks in config file?
+
+* Can stty replace tput in all cases since 'stty size' returns rows + cols?  Am I using tput for anything but that?
+
+* Make progress meter an awk script.
+
+* Create test-progress-meter demo script.
+
+* Give choose-folder function the ability to navigate to child and parent objects.
+
+* test all demos from main demo script
+
+* Change demo-menu so that when choosing an item from the submenu, the prompt does not take you back to the main menu selection.  The problem is that the script is written into a loop.  When you make a selection from the submenu, it goes back to the beginning of the loop.
+
+* Document usage of gDlg(), even though it's not usually called directly.  Say so in the doc.
+
+* Variable $1 is not quoted at end of awk script in get_width(), get_key_list(), get_item_list().  May not handle white space correctly.  Should it be quoted?  My quess is yes, but need to experiment.
+
+* Fix shmenu.conf test for terminal type to include other terminals than "XTERM".
+
+* Make sure shmenu.err doesn't get too long

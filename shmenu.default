@@ -1,0 +1,77 @@
+# shmenu.conf
+
+# Version String
+  shmenu_VERSION=BETA
+
+# Set shell
+  SHEBANG="#!$SHELL"
+  
+# Graphical(1), Text(0), or Command-Line(-1) UI Default (if not set)
+
+  GUI_DEFAULT=-1
+
+  if [ -z "$GUI" ]; then
+    GUI=$GUI_DEFAULT
+  fi
+
+# Force TUI if zenity not available
+  if [ $GUI = 1 ]; then
+    zenity --version > /dev/null 2>&1; [ ! "$?" = "0" ] && GUI=0
+  fi
+
+# Force CLI if whiptail is not available
+  if [ $GUI = 0 ]; then
+    whiptail --version > /dev/null 2>&1; [ ! "$?" = "0" ] && GUI=-1
+  fi
+  
+# Menu Path
+  INSTALLPATH_DEFAULT="~/shmenu"
+
+# Set constants depending on UI style
+case $GUI in
+  0)
+    # TUI menu system dialog app, usually "dialog" or "whiptail"
+    # 0 = auto
+    DIA="whiptail"
+    tMAX_DIALOG_HEIGHT=0       #keep at zero when using whiptail
+    tMIN_DIALOG_HEIGHT=0       #keep at zero when using whiptail
+    tMIN_DIALOG_WIDTH=48
+    tMAX_DIALOG_WIDTH=$(($(tput cols) - 6))
+    tTEXTBOX_HEIGHT=$(($(stty size | awk '{ print $1 }') - 6))
+    tTEXTBOX_WIDTH=$(($(tput cols) - 6))
+    ;;
+  1)
+    # GUI menu system dialog app (zenity), constants
+    gMAX_DIALOG_WIDTH=640      # pixels
+    gMAX_DIALOG_HEIGHT=640     # pixels
+    gMIN_DIALOG_WIDTH=340      # pixels
+    gMIN_DIALOG_TEXT_WIDTH=55  # characters
+    # The following does not set the font.  It only describes the system font.
+    FONT_WIDTH=7               # pixels
+    FONT_HEIGHT=16             # pixels
+    TITLEBAR_HEIGHT=33         # pixels
+    HEADER_ROW_HEIGHT=33       # pixels
+    MENU_ROW_HEIGHT=23         # pixels
+    BUTTON_AREA_HEIGHT=64      # pixels
+    EDGE_WIDTH=36              # pixels
+    FIELD_SEP_WIDTH=3          # pixels
+    RADIOBUTTON_WIDTH=24       # pixels
+    CHECKBOX_WIDTH=23          # pixels
+    ;;
+  *)
+    # Fall-back to command-line interface
+    GUI=-1
+    ;;
+esac
+
+# Temp file for menus
+  MENU_EXEC="/tmp/menu-exec"
+
+# Debugging [yes/no]
+  SHOW_DEBUG_MESSAGES=no
+
+# Log file for menus
+  LOGERRORS=yes
+  DEFAULT_LOG_SIZE=1500    # lines
+  SMLOGFILE="./shmenu.err"
+  

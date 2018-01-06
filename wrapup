@@ -6,4 +6,4 @@
 
 f=$(ls)
 
-tar -cf ~/Dropbox/devscripts/shellmenu/shellmenu_`date +%y%m%d`.tar ${f[*]}
+tar -cf ~/Dropbox/Private/devscripts/shmenu/shmenu_`date +%y%m%d`.tar ${f[*]}

@@ -6,10 +6,10 @@
 ##
 ##        USAGE:  source ui-functions
 ##
-##  DESCRIPTION:  Common functions for shellmenu system user interface elements.
-##
+##  DESCRIPTION:  Common functions for shmenu system user interface elements.
+##                
 ##      OPTIONS:  ---
-## REQUIREMENTS:  shellmenu.conf
+## REQUIREMENTS:  shmenu.conf
 ##         BUGS:  ---
 ##        NOTES:  ---
 ##       AUTHOR:  Michael A. Taylor (mataylortech@gmail.com)
@@ -20,11 +20,12 @@
 ##=============================================================================
 ##
 
-# Note: If invoked from the command line, print a list of functions and their 
-# descriptions to standard output.
+# Note: If invoked from the command line without arguments, print a list of
+# functions and their descriptions to standard output.  Printable descriptions
+# begin with '##'.  Lines commented with only one '#' are ignored.
 
 if [[ $(basename $0 ) == 'ui-functions' ]]; then
-  egrep -e "() {$" -e "^}" -e "^ *##.*" $0 | \
+  egrep -e "\(\) [{]$" -e "^[}].*" -e "^ *##.*" $0 | \
     sed -e 's/ [{]$//g' -e "s/^[}].*//" -e 's/^ *##/  /g'
   exit 0
 fi
@@ -123,7 +124,7 @@ vMSG() {
 DebugMsg() {
   ## For displaying debugging messages to stderr
   ## Usage:
-  ##   #DebugMsg "Some text"
+  ## DebugMsg "Some text"
   [ ! "$SHOW_DEBUG_MESSAGES" = "yes" ] && return 0
   local msg_text="$@"
   if [ ! -z "$1" ]; then
@@ -205,10 +206,10 @@ Dlg() {
   ##
   ## Notes:
   ## * "Default text" arg only works with ENTRY function.
-  ## * For TEXT functiton, replaced "text" with filename.
+  ## * For TEXT function, replaced "text" parameter with filename.
   ## * Titlebar used with menus and text boxes, but not with dialogs which have 
-  ##   default titles.
-  ## * MENUS: global array "menu_list[ ]" must already by populated according
+  ##   default titles which cannot be changed (yet).
+  ## * MENUS: global array "menu_list[ ]" must already be populated according
   ##   to the following "|" separated format:
   ##
   ##                key items...
@@ -383,7 +384,7 @@ Dlg() {
   return 0
 } # End of Dlg
 
-gDlg(){
+gDlg() {
   ## Provides a simplified method for using different types of dialog boxes
   ## with zenity, a set of GUI widgets.  This function is normally called by 
   ## the function Dlg().
@@ -440,33 +441,36 @@ gDlg(){
 
   # Calculate height
   # THERE IS A BUG IN ZENITY OR ITS DEPENDENCIES THAT MAKES A DIALOG BOX PROPORTIONALLY TALL AS IT GETS WIDER.  ONLY A FEW LINES OF TEXT ARE NEEDED TO MAKE THE WINDOW TALLER THAN THE SCREEN.  DO NOT EXPECT THIS TO GET BETTER SOON.
-  
+    
   DebugMsg "dlg_width = $dlg_width"
   DebugMsg "dlg_height = $dlg_height"
+
+  # Construct and execute dialog with zenity
+  # 3/11/2017: Added "2>/dev/null" to end of each line that calls zenity in order to supress the message "Gtk-Message: GtkDialog mapped without a transient parent. This is discouraged", which in this case is a useless warning.
 
   case $dlg_function in
     warning|info|error)
       # pad text so that dialog box doesn't look stupid
       dlg_text=$(pad_text "$dlg_text" $gMIN_DIALOG_TEXT_WIDTH )
-      zenity --$dlg_function --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text"  --width="$dlg_width"  --height="$dlg_height"
+      zenity --$dlg_function --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text"  --width="$dlg_width"  --height="$dlg_height" 2>/dev/null
       return 0
       ;;
     text)
       [ ! -f "$filename" ] && ErrorMsg "Filename required for text box." $FUNCNAME && return 1
-      zenity --text-info --title="$title" --filename="$filename" --width=$gMAX_DIALOG_WIDTH --height=$gMAX_DIALOG_HEIGHT
+      zenity --text-info --title="$title" --filename="$filename" --width=$gMAX_DIALOG_WIDTH --height=$gMAX_DIALOG_HEIGHT 2>/dev/null
       return 0
       ;;
     question)
-      zenity --question --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text" --width="$dlg_width" --height="$dlg_height"
+      zenity --question --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text" --width="$dlg_width" --height="$dlg_height" 2>/dev/null
       return $?
       ;;
     entry)
-      zenity --entry --title="$calling_script: $dlg_function_all_caps" --text="$dlg_prompt" --entry-text="$dlg_default" --width=$dlg_width --height=$dlg_height
+      zenity --entry --title="$calling_script: $dlg_function_all_caps" --text="$dlg_prompt" --entry-text="$dlg_default" --width=$dlg_width --height=$dlg_height 2>/dev/null
       status="$?"
       return $status
       ;;
     passwordbox)
-      zenity --entry --title="$calling_script: $title" --text="$dlg_prompt" --entry-text="$dlg_default" --width="$dlg_width" --height="$dlg_height" --hide-text
+      zenity --entry --title="$calling_script: $title" --text="$dlg_prompt" --entry-text="$dlg_default" --width="$dlg_width" --height="$dlg_height" --hide-text 2>/dev/null
       status="$?"
       return $status
       ;;
@@ -528,7 +532,7 @@ tDlg() {
       ;;
     textbox)
       $DIA --title "$title" --backtitle "$backtitle" \
-       --textbox $filename --scrolltext $tTEXTBOX_HEIGHT $tTEXTBOX_WIDTH 3>&1 1>&2 2>&3 3>&-
+       --textbox "$filename" --scrolltext $tTEXTBOX_HEIGHT $tTEXTBOX_WIDTH 3>&1 1>&2 2>&3 3>&-
        status="$?"
       ;;
     yesno)
@@ -920,7 +924,7 @@ gMenu() {
   esac
 
   # Build body of menu.
-  gMenu_body="zenity --title=\"$titlebar\" --text=\"$dlg_text\" $mfunction --height=$gMenu_height --width=$gMenu_width $dlg_extra_opt $columns ${body_list[@]}"
+  gMenu_body="zenity --title=\"$titlebar\" --text=\"$dlg_text\" $mfunction --height=$gMenu_height --width=$gMenu_width $dlg_extra_opt $columns ${body_list[@]} 2>/dev/null"
 
   # Write and execute menu script.
   echo -e "$gMenu_header\n\n$gMenu_body" > $MENU_EXEC
@@ -1222,7 +1226,7 @@ tPrompt() {
   [ ! -z "$2" ] && default="$2" 
   if [ "$exitprompt" = "yes" ]; then
     echo "" >&2
-    echo "( Type 'exit' to abort )" >&2
+    echo "( Type 'exit' to cancel )" >&2
     drawline ". " >&2
   fi
   [ "$bold" = "yes" ] && setcolor bold >&2
@@ -1232,7 +1236,7 @@ tPrompt() {
   printf "> " >&2
   read answer
   [ "$answer" = "" ] && answer="$default" && status=255
-  case $answer in exit|EXIT) return 1 ;; esac
+  case $answer in exit|EXIT|cancel|CANCEL) return 1 ;; esac
   [ "$quiet" = "no" ] && echo "$answer" >&1 && return $status
   return $status
 } # End of tPrompt
@@ -1444,7 +1448,7 @@ format_instruction_text_for_dialog() {
     echo "$text"
   fi
   return 0
-}
+} # End of format_instruction_text_for_dialog
 
 task_exec() {
   ## Execute a sequence of interactive commands or functions.  Used to make
@@ -1466,7 +1470,6 @@ task_exec() {
   ##
   ##  task_exec "${tasks[@]}"
   ##  status="$?"; [ ! "$status" = "0" ] && return $status
-  ##
 
 	[ ! -z "$1" ] && local tasks=("$@")
 	local level=0

@@ -2,9 +2,9 @@
 
 ###============================================================================
 ###
-###         FILE:  moretest
+###         FILE:  demo-radiolist
 ###
-###        USAGE:  moretest
+###        USAGE:  demo-radiolist
 ###
 ###  DESCRIPTION:  Test various features of shellmenu for debugging
 ###
@@ -56,6 +56,12 @@ usage_help() {
 
 # Initialize variables and arrays
 INT=0
+Lorem="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+Curabitur="Curabitur risus lectus, suscipit quis ultrices hendrerit, mollis ac risus."
+Ut_vitae="Ut vitae auctor massa."
+Proin="Proin venenatis tellus lobortis mi euismod congue."
+Curabitur="Curabitur luctus tortor nec orci tincidunt euismod."
+Pellentesque="Pellentesque et nibh id leo scelerisque posuere."
 
 # Parse command-line parameters
 
@@ -84,26 +90,44 @@ done
 # MAIN
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+while [ ! $INT = 1 ]; do
+# Reset option variable
+option=$null
+
   menu_list=(\
-  "one|alskdjlakjdf"
-  "two|alskdjflaksjfal"
-  "three|asldkfjalksdjalkfj"
-  "four|aslkdjfalksdjalkfj"
-  "five|alskdjfalksdjla"
-  "six|alskdjfalksjdfl;akjsdl;akfj"
-  "seven|alskdjfalksdjflaksjdflajsdlkasjdf"
-  "eight|alskdjfalksdfjlaksjal;ksfjlaksjf;laksdjf;laksjf;lakj"
-  "nine|alsdkjnmwnalwke lkwen lwkenr lwkenl;kwne r;weln"
-  "ten|alksdjflkaj l;kej l;kawej lfkv alklknl;4r jalkjzl;xckj"
-  "eleven|alksdfj lkej;lkwejr lkwejr lkj welkrj lwekjr wel;k "
-  "tweleve|alsdkfj lkj l;kwja l;kasjd fl;kaj elkja "
-  "thirteen|laskdflakj lwekjr lwekj l;skjflakj lk jl; j"
-  "fourteen|laksd jf"
-  "fifteen|alskd alskj lakj lakf lka l lkjaslkflkasjdfl; ak alskd jf"
-  "sixteen|oweirlkasnmf oaijer klfm4i tlkmoiet ;oiwej"
-  "seventeen|sad lkj 4weiroquweir ql;kmwer q4 lkjoijwe r"
-  "eighteen|asldkj o4iwer qoaj32o;ijl;34j oialwkejoij4o3 ij"
-  "nineteen|23o9i4 l2k3joi23ij oi2j"
-  "twenty|aslkdj lw4je rli2j lkjw eoi2lkj roisl;scvos9iuoiejr l")
-  
-  Dlg CHECKLIST "This is a test"
+    "submenu_no_option|Dlg RADIOLIST [Title] [List description]"
+    "submenu_show_keys|Dlg --show-keys RADIOLIST [Title] [List description]")
+    
+  Dlg MENU "$scriptname" "RADIOLIST Menu Syntax Demo - Choose From the Following:"  
+    
+  case $choice in
+    submenu_no_option)
+      submenu_option=$null
+      ;;
+     submenu_show_keys)
+      submenu_option="--show-keys"
+      ;;
+    *)
+      echo "No Selection"
+      exit 0
+      ;;
+  esac
+
+  menu_list=(\
+    "test_item_one|Item One|1a|apples|$Lorem"
+    "test_item_two|Item Two|2b|bananas|$Curabitur"
+    "test_item_three|Item Three|3c|coconuts|$Ut_vitae"
+    "test_item_four|Item Four|4d|dates|$Proin"
+    "test_item_five|Item Five|5e|emblic|$Curabitur"
+    "test_item_six|Item Six|6f|fig|$Pellentesque")
+    
+  Dlg $submenu_option RADIOLIST "$scriptname" "RADIOLIST with Formated Items"
+  [ ! $? = 0 ] && INT=1
+  if [ ! -z "$choice" ]; then
+    Dlg INFO "You selected $choice"
+  else
+    Dlg INFO "No Selection"
+    INT=0
+  fi
+
+done

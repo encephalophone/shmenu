@@ -2,9 +2,9 @@
 
 ###============================================================================
 ###
-###         FILE:  moretest
+###         FILE:  demo-question
 ###
-###        USAGE:  moretest
+###        USAGE:  demo-question
 ###
 ###  DESCRIPTION:  Test various features of shellmenu for debugging
 ###
@@ -15,8 +15,8 @@
 ###       AUTHOR:  Michael A. Taylor (mataylortech@gmail.com)
 ###      COMPANY:  ---
 ###      VERSION:  Beta
-###      CREATED:  04/03/2013
-###     REVISION:  04/03/2013
+###      CREATED:  04/16/2013
+###     REVISION:  04/16/2013
 ###============================================================================
 
 # Source
@@ -84,26 +84,39 @@ done
 # MAIN
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+while [ ! $INT = 1 ]; do
+
   menu_list=(\
-  "one|alskdjlakjdf"
-  "two|alskdjflaksjfal"
-  "three|asldkfjalksdjalkfj"
-  "four|aslkdjfalksdjalkfj"
-  "five|alskdjfalksdjla"
-  "six|alskdjfalksjdfl;akjsdl;akfj"
-  "seven|alskdjfalksdjflaksjdflajsdlkasjdf"
-  "eight|alskdjfalksdfjlaksjal;ksfjlaksjf;laksdjf;laksjf;lakj"
-  "nine|alsdkjnmwnalwke lkwen lwkenr lwkenl;kwne r;weln"
-  "ten|alksdjflkaj l;kej l;kawej lfkv alklknl;4r jalkjzl;xckj"
-  "eleven|alksdfj lkej;lkwejr lkwejr lkj welkrj lwekjr wel;k "
-  "tweleve|alsdkfj lkj l;kwja l;kasjd fl;kaj elkja "
-  "thirteen|laskdflakj lwekjr lwekj l;skjflakj lk jl; j"
-  "fourteen|laksd jf"
-  "fifteen|alskd alskj lakj lakf lka l lkjaslkflkasjdfl; ak alskd jf"
-  "sixteen|oweirlkasnmf oaijer klfm4i tlkmoiet ;oiwej"
-  "seventeen|sad lkj 4weiroquweir ql;kmwer q4 lkjoijwe r"
-  "eighteen|asldkj o4iwer qoaj32o;ijl;34j oialwkejoij4o3 ij"
-  "nineteen|23o9i4 l2k3joi23ij oi2j"
-  "twenty|aslkdj lw4je rli2j lkjw eoi2lkj roisl;scvos9iuoiejr l")
-  
-  Dlg CHECKLIST "This is a test"
+    "submenu_no_option|Dlg QUESTION [Quoted text]")
+    
+  Dlg MENU "$scriptname" "Test Question (OK/Cancel) Prompt"  
+    
+  case $choice in
+    submenu_no_option)
+      : # Do nothing
+      ;;
+    *)
+      echo "No Selection"
+      exit 0
+      ;;
+  esac
+
+  ### Usage: Dlg question "some informational text"
+  ###
+  ### Exit code is the result
+  ###
+  ### This dialog displays some text and prompts the user to choose 'OK' or
+  ### 'Cancel'.  Exiting the dialog without making a choice equals 'Cancel'.
+
+
+  Dlg QUESTION "The program will continue running when you choose 'OK'.  Do you approve?"
+  if [ $? = 0 ]; then
+    echo "OK!"
+  else
+    echo "CANCEL!"
+  fi
+  tPause
+
+done
+
+

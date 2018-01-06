@@ -1,0 +1,155 @@
+#!/bin/bash
+
+###============================================================================
+###
+###         FILE:  demo-menu
+###
+###        USAGE:  demo-menu
+###
+###  DESCRIPTION:  Test various features of the menu for debugging
+###
+###      OPTIONS:  --help, --verbose, --quiet
+### REQUIREMENTS:  ui-functions, shmenu.conf
+###         BUGS:  ---
+###        NOTES:  ---
+###       AUTHOR:  Michael A. Taylor (mataylortech@gmail.com)
+###      COMPANY:  ---
+###      VERSION:  Beta
+###      CREATED:  04/03/2013
+###     REVISION:  04/03/2013
+###============================================================================
+
+# Source
+. ./ui-functions
+. ./shmenu.conf
+
+scriptname=$(basename $0)
+TMP=`mktemp /tmp/${scriptname}.XXXXXX`
+
+# Set a trap to remove the temp file when the program exits.
+trap cleanup HUP QUIT TERM EXIT
+trap interrupt INT
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# FUNCTIONS
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+interrupt() {
+  ## Trap Cntrl-C, set INT to 1
+  INT=1
+} # End of interrupt
+
+cleanup() {
+  ## Remove temp file if it exists.
+  [ -f "$TMP" ] && rm -f $TMP
+} # End of cleanup
+
+usage_help() {
+  ## Display title header to standard output
+  cat "$0" | egrep '^###'
+  return 0
+} # End of Usage
+
+#------------------------------------------------------------------------------
+# PRE-PROCESSING
+#------------------------------------------------------------------------------
+
+# Initialize variables and arrays
+INT=0
+option=$null
+Lorem="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
+Curabitur="Curabitur risus lectus, suscipit quis ultrices hendrerit, mollis ac risus."
+Ut_vitae="Ut vitae auctor massa."
+Proin="Proin venenatis tellus lobortis mi euismod congue."
+Curabitur="Curabitur luctus tortor nec orci tincidunt euismod."
+Pellentesque="Pellentesque et nibh id leo scelerisque posuere."
+
+# Parse command-line parameters
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      usage_help
+      exit 0
+      ;; 
+    -v|--verbose)
+      verbose=0
+      shift
+      ;;
+    -q|--quiet)
+      verbose=1
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+
+#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# MAIN
+#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+###
+### Syntax for Dlg MENU wrapper:
+###
+###  Dlg [option] MENU ["Window Title"] ["List description"]
+### 
+### Global array "menu_list[ ]" must already be populated according
+### to the following "|" separated format:
+###
+###                key|column1|column2|...
+###                --- ------------------------
+###  menu_list[0]: one|apples|bananas|coconuts...
+###  menu_list[1]: two|pineapples|strawberries|star fruits...
+###  etc...
+###
+### or like so:
+###
+### menu_list=(\
+###   "one|apples|bananas|coconuts"
+###   "two|pineapples|strawberries|star fruits")
+
+while [ ! $INT = 1 ]; do
+# Reset option variable
+option=$null
+
+  menu_list=(\
+    "submenu_no_option|Dlg MENU [Title] [List description]"
+    "submenu_show_keys|Dlg MENU --show-keys [Title] [List description]")
+    
+  Dlg MENU "$scriptname" "MENU Syntax Demo - Choose From the Following:"
+    
+  case $choice in
+    submenu_show_keys)
+      option="--show-keys"
+      ;;
+    submenu_no_option)
+      : # Do nothing.
+      ;;
+    *)
+      echo "No Selection"
+      exit 0
+      ;;
+  esac
+
+  menu_list=(\
+    "test_item_one|Item One|1a|apples|$Lorem"
+    "test_item_two|Item Two|2b|bananas|$Curabitur"
+    "test_item_three|Item Three|3c|coconuts|$Ut_vitae"
+    "test_item_four|Item Four|4d|dates|$Proin"
+    "test_item_five|Item Five|5e|emblic|$Curabitur"
+    "test_item_six|Item Six|6f|fig|$Pellentesque")
+  
+  DebugMsg "option=$option"
+    
+  Dlg $option MENU "$scriptname" "MENU with Columnar List"
+  if [ ! -z "$choice" ]; then
+    Dlg INFO "You chose the item with the key value: '$choice'"
+  else
+    Dlg INFO "No Selection"
+    INT=0
+  fi
+
+done

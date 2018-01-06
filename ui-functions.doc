@@ -4,17 +4,17 @@
   
           USAGE:  source ui-functions
   
-    DESCRIPTION:  Common functions for shellmenu system user interface elements.
-  
+    DESCRIPTION:  Common functions for shmenu system user interface elements.
+                  
         OPTIONS:  ---
-   REQUIREMENTS:  shellmenu.conf
+   REQUIREMENTS:  shmenu.conf
            BUGS:  ---
           NOTES:  ---
          AUTHOR:  Michael A. Taylor (mataylortech@gmail.com)
         COMPANY:  ---
         VERSION:  Beta
         CREATED:  Summer 2008
-       REVISION:  
+       REVISION:  4/17/2013
   =============================================================================
   
 setcolor()
@@ -38,7 +38,7 @@ vMSG()
 DebugMsg()
    For displaying debugging messages to stderr
    Usage:
-     #DebugMsg "Some text"
+   DebugMsg "Some text"
 
 LogMsg()
    Write message to program log if global var "LOGERRORS" = "yes"
@@ -82,10 +82,10 @@ Dlg()
   
    Notes:
    * "Default text" arg only works with ENTRY function.
-   * For TEXT functiton, replaced "text" with filename.
+   * For TEXT function, replaced "text" parameter with filename.
    * Titlebar used with menus and text boxes, but not with dialogs which have 
-     default titles.
-   * MENUS: global array "menu_list[ ]" must already by populated according
+     default titles which cannot be changed (yet).
+   * MENUS: global array "menu_list[ ]" must already be populated according
      to the following "|" separated format:
   
                   key items...
@@ -94,6 +94,7 @@ Dlg()
     menu_list[1]: two|pineapples|strawberries|star fruits...
     etc...
 
+gDlg()
    Provides a simplified method for using different types of dialog boxes
    with zenity, a set of GUI widgets.  This function is normally called by 
    the function Dlg().
@@ -114,7 +115,6 @@ tCenter_text()
    Center text for TUI dialogs
    Usage:
      tCenter_text [width] ["some text"]
-   
 
 tMenu()
    Generate a TUI menu.  Populates var 'choice' and array 'choice_list[]' (for
@@ -162,20 +162,12 @@ get_key_list()
 
 get_item_list()
    Omit keys from '|' separated list in file $1, print the rest to stdout.
- 
 
 tablify()
    Arrange "|"-separated fields in file $1 into a table.
-   
-     
- 
-   
-
 
 quotify()
    Add double-quotes to each line in file $1, print to stdout
-       
-         
 
 insertify()
    Insert an UN-quoted string into a quoted list after first quoted item
@@ -184,16 +176,11 @@ insertify()
 
 count_fields()
    Count the max number of "|"-seperated fields in a file.
-   
 
 normalize_list()
    If a list has only one field, copy the first field to the second, 
    separated by '|', unless $1=yes.  Also, equalize the number of fields in 
    all lines of file $2.
-   
-     
-       
-         
 
 pad_text()
    Add spaces to the end of a line of text up to a specified column width, 
@@ -203,7 +190,6 @@ pad_text()
 
 center_text()
    Center text in the terminal
-   
 
 format_instruction_text_for_dialog()
    Output formatted text to stdout
@@ -216,19 +202,20 @@ task_exec()
    of the command or function being executed.  An exit code of 1 goes back
    one level, and an exit code of 0 goes forward.  222 means "stay in place",
    and any other number means "go back x places in the list".  Currently,
-   this function cannot accept arguments for the individual commands.
+   this function cannot accept arguments.
+  
    Usage:
    task_exec [task1] [task2] [task3]...
      
    NOTE: Typical usage:
    
-   task_list=(\
-   name_of_function_1 \
-   name_of_function_2 \
-   name of function_3...)
+    tasks=(\
+    name_of_function_1 \
+    name_of_function_2 \
+    name of function_3...)
   
-   task_exec "${task_list[@]}"
-   status="$?"; [ ! "$status" = "0" ] && return $status
+    task_exec "${tasks[@]}"
+    status="$?"; [ ! "$status" = "0" ] && return $status
 
 progress_meter()
    TODO Make this an awk script instead!
