@@ -6,7 +6,7 @@
 ###
 ###        USAGE:  demo-question
 ###
-###  DESCRIPTION:  Test various features of shellmenu for debugging
+###  Description:  Demo various features of shmenu for debugging
 ###
 ###      OPTIONS:  --help, --verbose, --quiet
 ### REQUIREMENTS:  ui-functions, shmenu.conf
@@ -96,7 +96,7 @@ while [ ! $INT = 1 ]; do
       : # Do nothing
       ;;
     *)
-      echo "No Selection"
+      vMSG "No Selection"
       exit 0
       ;;
   esac
@@ -111,11 +111,10 @@ while [ ! $INT = 1 ]; do
 
   Dlg QUESTION "The program will continue running when you choose 'OK'.  Do you approve?"
   if [ $? = 0 ]; then
-    echo "OK!"
+    Dlg INFO "OK!"
   else
-    echo "CANCEL!"
+    Dlg INFO "CANCEL!"
   fi
-  tPause
 
 done
 

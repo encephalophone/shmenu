@@ -6,7 +6,7 @@
 ###
 ###        USAGE:  demo-text
 ###
-###  DESCRIPTION:  Test various features of shellmenu for debugging
+###  Description:  Demo various features of shmenu for debugging
 ###
 ###      OPTIONS:  --help, --verbose, --quiet
 ### REQUIREMENTS:  ui-functions, shmenu.conf
@@ -96,13 +96,12 @@ while [ ! $INT = 1 ]; do
       : # Do nothing
       ;;
     *)
-      echo "No Selection"
+      vMSG "No Selection"
       exit 0
       ;;
   esac
 
   Dlg TEXT "Read Me" README
-  echo $?
-  tPause
+  Dlg INFO "Exit code = $?"
 
 done

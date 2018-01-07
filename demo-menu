@@ -6,7 +6,7 @@
 ###
 ###        USAGE:  demo-menu
 ###
-###  DESCRIPTION:  Test various features of the menu for debugging
+###  Description:  Demo various features of the menu for debugging
 ###
 ###      OPTIONS:  --help, --verbose, --quiet
 ### REQUIREMENTS:  ui-functions, shmenu.conf
@@ -129,7 +129,7 @@ option=$null
       : # Do nothing.
       ;;
     *)
-      echo "No Selection"
+      vMSG "No Selection"
       exit 0
       ;;
   esac

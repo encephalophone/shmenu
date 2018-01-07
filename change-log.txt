@@ -40,7 +40,7 @@ Sun 23 Aug 2015 02:05:25 PM EDT
 Sat 11 Mar 2017 08:36:16 AM EST 
 1.0 ui-functions: Added "2>/dev/null" to end of each line that calls zenity in order to supress the message "Gtk-Message: GtkDialog mapped without a transient parent. This is discouraged", which in this case is a useless warning.
 2.0 added args to demo script for specifying which type of interface to use: -g|--gui, -t|--tui, -c|--cui|--cli, writes change to shmenu.conf
-3.0 Moved shellmenu.err log to local directory instead of /var/log, because we will not always be running as super user.
+3.0 Moved shmenu.err log to local directory instead of /var/log, because we will not always be running as super user.
 
 Sun 12 Mar 2017 10:35:58 AM EDT 
 1.0 added code to force TUI if zenity is not available & force cli mode if whiptail not available.
@@ -50,3 +50,6 @@ Sun 26 Mar 2017 09:25:10 PM EDT
 
 Wed 12 Apr 2017 10:27:14 PM EDT 
 1.0 Fixed demo-text so that contents of file is displayed.
+
+Sat 06 Jan 2018
+1.0 Minor fixes. Edited some comment lines. Changed some echo statements to vMSG() functions.

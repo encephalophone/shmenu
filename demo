@@ -6,9 +6,9 @@
 ###
 ###        USAGE:  demo
 ###
-###  DESCRIPTION:  Test various features of shellmenu for debugging
+###  Description:  Demo various features of shmenu for debugging
 ###
-###      OPTIONS:  --help, --verbose, --quiet
+###      OPTIONS:  --help, --verbose, --quiet, -cui, -tui, -gui
 ### REQUIREMENTS:  ui-functions, shmenu.conf
 ###         BUGS:  ---
 ###        NOTES:  ---
@@ -124,7 +124,7 @@ while [ ! $INT = 1 ]; do
     if [ ! -z "$choice" ]; then
       ./$choice
     else
-      echo "No Selection"
+      vMSG "No Selection"
       INT=1
     fi
   

@@ -8,8 +8,6 @@ To Do
 
 * Test with Debian, Fedora, Centos, etc. and document any problems.
 
-* [TOP PRIORITY] Rename shellmenu.conf to shmenu.conf and change all instances of "shellmenu.conf" in every file to "shmenu.conf"
-
 * Write a script to check dependencies and make any changes that are needed.  Should be able to work in Debian, Ubuntu, Fedora, Centos, perhaps others.
 
 * Proofread all ui-functions comments, update, and then update documentation.
@@ -47,3 +45,5 @@ To Do
 * Fix shmenu.conf test for terminal type to include other terminals than "XTERM".
 
 * Make sure shmenu.err doesn't get too long
+
+* Create installer script so menus can be built for use by any user.

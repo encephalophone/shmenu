@@ -80,6 +80,10 @@ drawline() {
 
 MSG() {
   ## Display Message to stdout and log
+  ## Options:
+  ## -b | --bold                          Output bold text to terminal.
+  ## Usage:
+  ## MSG {-b|--bold} "Send text to stdout and log"
   # Parse command-line parameters
   [ "$quiet" = "0" ] && LogMsg "$@" && return 0
   local set_bold="no"
@@ -105,7 +109,11 @@ MSG() {
 } # End MSG
 
 vMSG() {
-  ## Only send output on to MSG function if global var "verbose" = 0 (true)
+  ## Only send output to MSG function if global var "verbose" = 0 (true)
+  ## Options:
+  ## -b | --bold                          Output bold text to terminal.
+  ## Usage:
+  ## vMSG {-b|--bold} "You will see this if verbose messages are enabled"
   local option=
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -275,6 +283,7 @@ Dlg() {
           ;;
         *)
           cliDlg $dlg_function "$dlg_text"
+          tPause
           return 0
           ;;
       esac
@@ -389,10 +398,10 @@ gDlg() {
   ## with zenity, a set of GUI widgets.  This function is normally called by 
   ## the function Dlg().
 
-  # Gloval Var
+  # Global variable
   answer=
 
-  # Local Var
+  # Local variable
   local dlg_function="$1"
   local dlg_function_all_caps=$(echo $1 | tr '[:lower:]' '[:upper:]')  
   local title="$2"
@@ -433,8 +442,8 @@ gDlg() {
   # Limit the width of the dialog
   [ $dlg_width -gt $gMAX_DIALOG_WIDTH ] && dlg_width=$gMAX_DIALOG_WIDTH
   
-  # Limit the height of the dialog -- not currently used.
-  #[ $dlg_height -gt $gMAX_DIALOG_HEIGHT ] && dlg_height=$gMAX_DIALOG_HEIGHT
+  # Limit the height of the dialog
+  [ $dlg_height -gt $gMAX_DIALOG_HEIGHT ] && dlg_height=$gMAX_DIALOG_HEIGHT
 
   # If length of msg text <= minimum text width, center it and pad with spaces
   [ ${#dlg_text} -le $min_text_width ] && dlg_width=$gMIN_DIALOG_WIDTH
@@ -452,25 +461,25 @@ gDlg() {
     warning|info|error)
       # pad text so that dialog box doesn't look stupid
       dlg_text=$(pad_text "$dlg_text" $gMIN_DIALOG_TEXT_WIDTH )
-      zenity --$dlg_function --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text"  --width="$dlg_width"  --height="$dlg_height" 2>/dev/null
+      $GDIA --$dlg_function --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text"  --width="$dlg_width"  --height="$dlg_height" 2>/dev/null
       return 0
       ;;
     text)
       [ ! -f "$filename" ] && ErrorMsg "Filename required for text box." $FUNCNAME && return 1
-      zenity --text-info --title="$title" --filename="$filename" --width=$gMAX_DIALOG_WIDTH --height=$gMAX_DIALOG_HEIGHT 2>/dev/null
+      $GDIA --text-info --title="$title" --filename="$filename" --width=$gMAX_DIALOG_WIDTH --height=$gMAX_DIALOG_HEIGHT 2>/dev/null
       return 0
       ;;
     question)
-      zenity --question --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text" --width="$dlg_width" --height="$dlg_height" 2>/dev/null
+      $GDIA --question --title="$calling_script: $dlg_function_all_caps" --text="$dlg_text" --width="$dlg_width" --height="$dlg_height" 2>/dev/null
       return $?
       ;;
     entry)
-      zenity --entry --title="$calling_script: $dlg_function_all_caps" --text="$dlg_prompt" --entry-text="$dlg_default" --width=$dlg_width --height=$dlg_height 2>/dev/null
+      $GDIA --entry --title="$calling_script: $dlg_function_all_caps" --text="$dlg_prompt" --entry-text="$dlg_default" --width=$dlg_width --height=$dlg_height 2>/dev/null
       status="$?"
       return $status
       ;;
     passwordbox)
-      zenity --entry --title="$calling_script: $title" --text="$dlg_prompt" --entry-text="$dlg_default" --width="$dlg_width" --height="$dlg_height" --hide-text 2>/dev/null
+      $GDIA --entry --title="$calling_script: $title" --text="$dlg_prompt" --entry-text="$dlg_default" --width="$dlg_width" --height="$dlg_height" --hide-text 2>/dev/null
       status="$?"
       return $status
       ;;
@@ -924,7 +933,7 @@ gMenu() {
   esac
 
   # Build body of menu.
-  gMenu_body="zenity --title=\"$titlebar\" --text=\"$dlg_text\" $mfunction --height=$gMenu_height --width=$gMenu_width $dlg_extra_opt $columns ${body_list[@]} 2>/dev/null"
+  gMenu_body="$GDIA --title=\"$titlebar\" --text=\"$dlg_text\" $mfunction --height=$gMenu_height --width=$gMenu_width $dlg_extra_opt $columns ${body_list[@]} 2>/dev/null"
 
   # Write and execute menu script.
   echo -e "$gMenu_header\n\n$gMenu_body" > $MENU_EXEC
@@ -1107,7 +1116,7 @@ cliDlg() {
       echo -e "$dlg_text" | fmt --width=$(tput cols) >$TMP
       cat $TMP | more -$linesperpage
       drawline "-" blue >&2
-      [ ! "$?" = "0" ] && return 1
+      #[ ! "$?" = "0" ] && return 1
       ;;
     question)
       INT=
@@ -1118,7 +1127,7 @@ cliDlg() {
         echo -e "$dlg_text" | fmt --width=$(tput cols) >&2
         answer=$(tPrompt "(O)K or [C]ancel")
         case `echo ${answer:0:1} | tr '[:upper:]' '[:lower:]'` in
-          o)
+          o|O|ok|OK|oK|Ok)
             return 0
             ;;
           *)

@@ -6,7 +6,7 @@
 ###
 ###        USAGE:  demo-template
 ###
-###  DESCRIPTION:  Test various features of shellmenu for debugging
+###  Description:  Demo various features of shmenu for debugging
 ###
 ###      OPTIONS:  --help, --verbose, --quiet
 ### REQUIREMENTS:  ui-functions, shmenu.conf
@@ -93,10 +93,9 @@ while [ ! $INT = 1 ]; do
     Dlg MENU "Menu Template" "Menu Template example"
     [ ! $? = 0 ] && set INT=1
     if [ ! -z "$choice" ]; then
-      echo "selected item was: $choice."
-      tPause
+      Dlg INFO "selected item was: $choice."
     else
-      echo "No Selection"
+      vMSG "No Selection"
       INT=1
     fi
   

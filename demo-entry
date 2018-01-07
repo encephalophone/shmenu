@@ -6,7 +6,7 @@
 ###
 ###        USAGE:  demo-entry
 ###
-###  DESCRIPTION:  Test various features of shellmenu for debugging
+###  Description:  Demo various features of shmenu for debugging
 ###
 ###      OPTIONS:  --help, --verbose, --quiet
 ### REQUIREMENTS:  ui-functions, shmenu.conf
@@ -96,7 +96,7 @@ while [ ! $INT = 1 ]; do
       : # Do nothing
       ;;
     *)
-      echo "No Selection"
+      vMSG "No Selection"
       exit 0
       ;;
   esac
@@ -111,8 +111,7 @@ while [ ! $INT = 1 ]; do
 
   answer=$(Dlg ENTRY "INSTRUCTIONS: Enter some data in the text box below." "default text")
 
-  echo "$answer"
-  tPause
+  Dlg INFO "Output=$answer"
 done
 
 

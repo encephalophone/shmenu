@@ -6,7 +6,7 @@
 ###
 ###        USAGE:  demo-info
 ###
-###  DESCRIPTION:  Test various features of shellmenu for debugging
+###  Description:  Demo various features of shmenu for debugging
 ###
 ###      OPTIONS:  --help, --verbose, --quiet
 ### REQUIREMENTS:  ui-functions, shmenu.conf
@@ -96,14 +96,14 @@ while [ ! $INT = 1 ]; do
       : # Do nothing
       ;;
     *)
-      echo "No Selection"
+      vMSG "No Selection"
       exit 0
       ;;
   esac
 
   ### Usage: Dlg INFO "Some text goes here."
   ###
-  ### This is basically a standard "message box". Always returns exit code 0
+  ### This is a standard "message box". Always returns exit code 0
   ### unless the message box widget failed to run for some reason.
   ###
   ### NOTE: There is a bug in zenity that ignores the height parameter and makes
@@ -114,6 +114,6 @@ while [ ! $INT = 1 ]; do
   
 Fusce iaculis elementum massa ac luctus. Donec purus magna, elementum at lacinia ac, varius vel nisl. Nam sed diam neque, nec gravida est. Integer semper magna ac neque egestas pretium. Pellentesque fermentum dui eu felis dapibus volutpat. Praesent aliquet velit a massa pretium sollicitudin. Fusce felis ligula, pretium in congue sed, dictum ut metus. Quisque tellus diam, luctus non varius sed, tristique nec sem. Donec consectetur luctus lorem, et porttitor nunc ultrices tincidunt. Phasellus elementum est at sapien tristique eleifend. Nunc ut nunc fermentum nibh lacinia sollicitudin. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam rhoncus consequat augue, et rutrum massa adipiscing vel. Curabitur quis neque velit, sit amet rutrum mi. Quisque iaculis porttitor est, quis hendrerit nunc pulvinar nec. Donec quis felis leo, id posuere libero."
 
-  echo $?
+  Dlg INFO "Exit code = $?"
 
 done
